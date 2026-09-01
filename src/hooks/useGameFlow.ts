@@ -4,12 +4,15 @@ import { audioManager } from '../audio/audioManager'
 
 export const useGameFlow = () => {
   const gameState = useGameStore((state) => state.state.gameState)
-  const { startGame, pauseGame, resumeGame } = useGameStore()
+  const { startGame, pauseGame, resumeGame, toggleMute } = useGameStore()
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
-      
+
+      // Unlock audio on the first user interaction (required by browsers).
+      audioManager.init()
+
       // Prevent default for game keys
       if (['escape', 'enter', ' '].includes(key)) {
         e.preventDefault()
@@ -36,11 +39,9 @@ export const useGameFlow = () => {
         }
       }
       
-      // M key: Toggle mute
+      // M key: Toggle mute (updates store so the HUD indicator reflects it)
       if (key === 'm') {
-        const isMuted = audioManager.toggleMute()
-        // Show mute indicator (could be added to HUD later)
-        console.log(isMuted ? 'Muted' : 'Unmuted')
+        toggleMute()
       }
     }
     
@@ -48,5 +49,5 @@ export const useGameFlow = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [gameState, pauseGame, resumeGame, startGame])
+  }, [gameState, pauseGame, resumeGame, startGame, toggleMute])
 }

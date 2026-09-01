@@ -34,6 +34,16 @@ class FallbackSynthesizer {
     return this.ctx
   }
 
+  // Force-create and resume the context. Must be called from within a user
+  // gesture (e.g. a keydown handler) to satisfy browser autoplay policies.
+  resume() {
+    try {
+      this.ensureContext()
+    } catch (e) {
+      // Ignore audio errors
+    }
+  }
+
   // Short laser pew sound
   playLaser() {
     try {
@@ -306,42 +316,38 @@ export class AudioManager {
 
   private preloadSounds() {
     for (const [key, path] of Object.entries(AUDIO_FILES)) {
+      const soundKey = key as keyof typeof AUDIO_FILES
       try {
-        this.sounds[key as keyof typeof AUDIO_FILES] = new Howl({
-          src: [path],
+        this.sounds[soundKey] = new Howl({
+          src: [`audio/${path}`],
           preload: true,
           volume: 1.0,
+          // If the file is missing (no MP3 provided), drop it so we cleanly
+          // fall back to the synthesized sound instead of playing silence.
+          onloaderror: () => {
+            this.sounds[soundKey] = null
+          },
         })
       } catch (e) {
-        console.warn(`Failed to preload ${path}:`, e)
-        this.sounds[key as keyof typeof AUDIO_FILES] = null
+        this.sounds[soundKey] = null
       }
     }
   }
 
-  // Initialize audio context on first user interaction
+  // Initialize audio context on first user interaction (browser autoplay policy)
   init() {
     if (this.initialized) return
-
-    // Try to resume Web Audio API context
-    try {
-      const ctx = (this.synthesizer as any).ctx as AudioContext
-      if (ctx && ctx.state === 'suspended') {
-        ctx.resume()
-      }
-    } catch (e) {
-      // Ignore
-    }
-
+    this.synthesizer.resume()
     this.initialized = true
   }
 
-  // Check if audio file exists, otherwise use fallback
+  // Use the real audio file only when it actually finished loading; otherwise
+  // play the synthesized fallback.
   private playSound(key: keyof typeof AUDIO_FILES, fallbackFn: () => void) {
     if (this.muted) return
 
     const sound = this.sounds[key]
-    if (sound) {
+    if (sound && sound.state() === 'loaded') {
       sound.play()
     } else {
       fallbackFn()

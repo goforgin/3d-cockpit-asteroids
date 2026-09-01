@@ -64,10 +64,27 @@ export const useGameSimulation = () => {
     
     useGameStore.getState().updateLasers(lasers)
 
-    // Update lock-on target (asteroid under the crosshair)
+    // Update lock-on target. The lock is "sticky": once acquired it stays on
+    // that rock until the player presses an arrow key to re-aim (or the target
+    // is destroyed). When there is no valid lock we continuously scan so it
+    // acquires as soon as the crosshair touches a rock.
     const aimState = useGameStore.getState().state
-    const lockedId = getLockedAsteroidId(aimState.ship, aimState.asteroids)
-    useGameStore.getState().setLockedTarget(lockedId)
+    const arrowHeld =
+      inputManager.isKeyHeld('arrowleft') ||
+      inputManager.isKeyHeld('arrowright') ||
+      inputManager.isKeyHeld('arrowup') ||
+      inputManager.isKeyHeld('arrowdown')
+    const currentLock = aimState.lockedAsteroidId
+    const lockValid =
+      currentLock !== null && aimState.asteroids.some((a) => a.id === currentLock)
+
+    let nextLock: string | null
+    if (arrowHeld || !lockValid) {
+      nextLock = getLockedAsteroidId(aimState.ship, aimState.asteroids)
+    } else {
+      nextLock = currentLock
+    }
+    useGameStore.getState().setLockedTarget(nextLock)
 
     // Check for laser firing (Space key)
     if (inputManager.isKeyDown(' ')) {

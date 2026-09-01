@@ -8,6 +8,9 @@ import { getForwardVector } from '../game/shipPhysics'
 
 interface GameStore {
   state: GameState
+  muted: boolean
+  muteFlashUntil: number   // timestamp; show a MUTED/UNMUTED toast until this
+  toggleMute: () => void
   startGame: () => void
   pauseGame: () => void
   resumeGame: () => void
@@ -48,6 +51,14 @@ export const useGameStore = create<GameStore>((set) => ({
     lastShotTime: 0,
     lockedAsteroidId: null,
   },
+
+  muted: false,
+  muteFlashUntil: 0,
+
+  toggleMute: () => set(() => {
+    const muted = audioManager.toggleMute()
+    return { muted, muteFlashUntil: Date.now() + 1500 }
+  }),
   
   startGame: () => set({
     state: {
