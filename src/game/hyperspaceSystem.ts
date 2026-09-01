@@ -36,8 +36,9 @@ export function tryHyperspace(ship: Ship, now: number): { ship: Ship; died: bool
       y: randomRange(-180, 180),
       z: randomRange(-180, 180),
     },
-    // Clear velocity
+    // Clear velocity and any residual spin
     velocity: { x: 0, y: 0, z: 0 },
+    angularVelocity: { yaw: 0, pitch: 0 },
     // 1 second invulnerability after jump
     invulnerableUntil: now + 1000,
     // Set cooldown

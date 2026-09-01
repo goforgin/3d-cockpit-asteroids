@@ -1,13 +1,16 @@
 // Game constants - tunable numbers for gameplay balance
 
-// Rotation speeds (radians per second)
-export const ROTATION_YAW_SPEED = Math.PI          // 180°/sec
-export const ROTATION_PITCH_SPEED = Math.PI * 0.67 // 120°/sec
+// Rotation (joystick-style: angular velocity ramps up while a key is held and
+// coasts to a stop when released, instead of snapping instantly)
+export const ROTATION_YAW_SPEED = 1.4              // rad/s max yaw rate (~80°/s)
+export const ROTATION_PITCH_SPEED = 1.1            // rad/s max pitch rate (~63°/s)
+export const ROTATION_ACCEL = 5.0                  // rad/s² ramp-up rate
+export const ROTATION_DAMPING = 9.0                // per-second decay when no input
 
-// Thrust and movement
-export const THRUST_ACCEL = 25                     // units/s²
-export const MAX_SPEED = 40                        // units/s
-export const FRICTION = 0.98                       // per frame at 60fps
+// Thrust and movement (space inertia — momentum carries, gentle drag)
+export const THRUST_ACCEL = 45                     // units/s²
+export const MAX_SPEED = 55                        // units/s
+export const LINEAR_DRAG = 0.35                    // fraction of velocity lost per second
 
 // Combat
 export const FIRE_RATE = 4                         // shots per second

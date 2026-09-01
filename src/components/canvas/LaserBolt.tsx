@@ -9,46 +9,65 @@ interface LaserProps {
 export const LaserBolt = ({ position, velocity }: LaserProps) => {
   const laserRef = useRef<THREE.Mesh>(null!)
   const lightRef = useRef<THREE.PointLight>(null!)
-  
-  // Calculate length based on velocity (for visual length)
-  const speed = Math.sqrt(
-    velocity.x * velocity.x +
-    velocity.y * velocity.y +
-    velocity.z * velocity.z
-  )
-  const length = Math.max(1, speed * 0.05) // Visual length based on speed
-  
-  // Calculate rotation to align with velocity
-  const target = { ...velocity }
-  const mag = Math.sqrt(target.x**2 + target.y**2 + target.z**2)
-  target.x /= mag
-  target.y /= mag
-  target.z /= mag
-  
+
+  // Unit travel direction
+  const mag = Math.sqrt(velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2) || 1
+  const dir = { x: velocity.x / mag, y: velocity.y / mag, z: velocity.z / mag }
+
+  // A long streak that trails behind the leading tip.
+  const length = 28
+  const glowLength = 44
+
+  // The cylinder is centered on its origin, so shift the center back along the
+  // travel direction by half its length. That places the leading tip at the
+  // laser's actual position and lets the body trail out behind it.
+  const center = {
+    x: position.x - dir.x * (length / 2),
+    y: position.y - dir.y * (length / 2),
+    z: position.z - dir.z * (length / 2),
+  }
+  const glowCenter = {
+    x: position.x - dir.x * (glowLength / 2),
+    y: position.y - dir.y * (glowLength / 2),
+    z: position.z - dir.z * (glowLength / 2),
+  }
+
   // Align cylinder with velocity direction.
   // cylinderGeometry's long axis is Y, so map +Y onto the travel direction.
   const quaternion = new THREE.Quaternion()
-  quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(target.x, target.y, target.z))
-  
+  quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dir.x, dir.y, dir.z))
+
   return (
     <>
-      <mesh ref={laserRef} position={[position.x, position.y, position.z]} quaternion={quaternion}>
-        <cylinderGeometry args={[0.05, 0.05, length, 8]} />
+      {/* Bright core bolt */}
+      <mesh ref={laserRef} position={[center.x, center.y, center.z]} quaternion={quaternion}>
+        <cylinderGeometry args={[0.09, 0.02, length, 8]} />
         <meshStandardMaterial
-          color="#00ffff"
+          color="#aaffff"
           emissive="#00ffff"
-          emissiveIntensity={3}
+          emissiveIntensity={4}
           roughness={0.2}
           metalness={0.8}
         />
       </mesh>
-      {/* Point light at laser position for bloom effect */}
+      {/* Wider, faded trailing glow */}
+      <mesh position={[glowCenter.x, glowCenter.y, glowCenter.z]} quaternion={quaternion}>
+        <cylinderGeometry args={[0.28, 0.0, glowLength, 8]} />
+        <meshBasicMaterial
+          color="#00ffff"
+          transparent
+          opacity={0.22}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Point light at the tip for bloom */}
       <pointLight
         ref={lightRef}
         position={[position.x, position.y, position.z]}
         color="#00ffff"
-        intensity={0.5}
-        distance={10}
+        intensity={0.8}
+        distance={14}
       />
     </>
   )

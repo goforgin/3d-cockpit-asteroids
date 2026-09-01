@@ -25,6 +25,10 @@ export interface Ship {
     yaw: number   // Y-axis rotation
     pitch: number // X-axis rotation
   }
+  angularVelocity: {
+    yaw: number   // rad/s, ramps up/down for joystick-style aiming
+    pitch: number
+  }
   invulnerableUntil: number
   shieldActiveUntil: number   // timestamp ms when shield expires
   shieldHitsLeft: number

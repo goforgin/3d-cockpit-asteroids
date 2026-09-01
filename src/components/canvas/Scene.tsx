@@ -1,5 +1,4 @@
 import { Stars } from '@react-three/drei'
-import { Environment } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import * as THREE from 'three'
@@ -34,15 +33,13 @@ export const Scene = () => {
         fade
         speed={0.5}
       />
-      <Environment preset="city" />
-      {/* Ambient light for dark space feel */}
-      <ambientLight intensity={0.15} />
-      {/* Warm dashboard glow */}
-      <pointLight position={[-0.5, -0.5, 0.5]} intensity={0.5} color="#ffaa00" />
-      {/* Cool fill light */}
-      <pointLight position={[0.5, 0.5, 0.5]} intensity={0.3} color="#00aaff" />
-      {/* Subtle exterior rim light */}
-      <directionalLight position={[0, 0, 5]} intensity={0.1} />
+      {/* Space lighting. Directional lights are position-independent, so
+          asteroids stay lit no matter how far the ship travels from origin. */}
+      <ambientLight intensity={0.45} />
+      {/* Primary "sun" */}
+      <directionalLight position={[100, 120, 60]} intensity={1.3} color="#ffffff" />
+      {/* Cool rim fill from the opposite side */}
+      <directionalLight position={[-120, -60, -100]} intensity={0.5} color="#88aaff" />
       <Ship />
       <AsteroidField />
       <LaserField />
