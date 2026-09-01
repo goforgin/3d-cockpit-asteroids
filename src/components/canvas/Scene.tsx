@@ -9,6 +9,7 @@ import { Effects } from './Effects'
 import { ShieldBubble } from './ShieldBubble'
 import { ExplosionField } from './ExplosionField'
 import { ThrustParticles } from './ThrustParticles'
+import { LockReticle } from './LockReticle'
 
 export const Scene = () => {
   const starRef = useRef<THREE.Points>(null!)
@@ -46,6 +47,7 @@ export const Scene = () => {
       <ShieldBubble />
       <ExplosionField />
       <ThrustParticles />
+      <LockReticle />
       <Effects />
     </>
   )

@@ -12,26 +12,27 @@ export class InputManager {
   constructor() {
     window.addEventListener('keydown', (e) => this.handleKey(e, true))
     window.addEventListener('keyup', (e) => this.handleKey(e, false))
+    // If focus is lost (e.g. Alt opened an OS menu), release everything so no
+    // key stays stuck "held".
+    window.addEventListener('blur', () => this.clearAll())
   }
   
   private handleKey(e: KeyboardEvent, isDown: boolean) {
-    // Prevent default for game keys to avoid page scroll
+    // Normalize to a stable key name. e.key for the Alt/Option key is 'Alt',
+    // for the spacebar it is ' '. We intentionally do NOT key off e.altKey,
+    // because that would mislabel every other key pressed while Alt is held.
     const key = e.key.toLowerCase()
-    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'alt', 'shift', 'z'].includes(key)) {
+
+    // Prevent default for game keys to avoid page scroll / menu focus
+    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'x', 'shift', 'z'].includes(key)) {
       e.preventDefault()
     }
-    
-    // Handle Alt key - check both e.key and e.altKey
-    let keyName = key
-    if (e.key === 'Alt' || e.altKey) {
-      keyName = 'alt'
+
+    if (!this.keys[key]) {
+      this.keys[key] = { pressed: false, held: false, duration: 0 }
     }
-    
-    if (!this.keys[keyName]) {
-      this.keys[keyName] = { pressed: false, held: false, duration: 0 }
-    }
-    
-    const keyState = this.keys[keyName]
+
+    const keyState = this.keys[key]
     if (isDown) {
       keyState.pressed = true
       keyState.held = true
@@ -40,6 +41,16 @@ export class InputManager {
       keyState.pressed = false
       keyState.held = false
       keyState.duration = 0
+    }
+  }
+
+  // Clear all held keys — used when the window loses focus so a key whose
+  // keyup never arrived (common with Alt) doesn't get stuck.
+  public clearAll() {
+    for (const key in this.keys) {
+      this.keys[key].pressed = false
+      this.keys[key].held = false
+      this.keys[key].duration = 0
     }
   }
   

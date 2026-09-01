@@ -22,8 +22,8 @@ export const ThrustParticles = () => {
   useFrame((state) => {
     const ship = useGameStore.getState().state.ship
     
-    // Check if Alt is held for thrust
-    const isThrusting = inputManager.isKeyHeld('alt')
+    // Check if thrust (X) is held
+    const isThrusting = inputManager.isKeyHeld('x')
     
     if (isThrusting) {
       // Emit new particles from behind the ship (opposite the forward axis).

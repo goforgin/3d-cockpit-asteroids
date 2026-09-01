@@ -15,7 +15,7 @@ export const useKeyboard = () => {
     down: inputManager.isKeyHeld('arrowdown') || inputManager.isKeyHeld('s'),
     left: inputManager.isKeyHeld('arrowleft') || inputManager.isKeyHeld('a'),
     right: inputManager.isKeyHeld('arrowright') || inputManager.isKeyHeld('d'),
-    thrust: inputManager.isKeyHeld('alt'),
+    thrust: inputManager.isKeyHeld('x'),
     fire: inputManager.isKeyHeld(' '),
     shield: inputManager.isKeyHeld('z'),
     hyperspace: inputManager.isKeyHeld('shift'),

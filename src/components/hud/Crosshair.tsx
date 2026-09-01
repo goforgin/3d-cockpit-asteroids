@@ -9,9 +9,24 @@ export const Crosshair = () => {
     return null
   }
 
-  // Red when locked onto a rock, cyan/white otherwise.
-  const lineColor = locked ? 'rgba(255, 40, 40, 0.95)' : 'rgba(255, 255, 255, 0.6)'
-  const glow = locked ? '0 0 8px rgba(255, 0, 0, 0.9)' : '0 0 6px rgba(0, 255, 255, 0.3)'
+  // When locked, the red targeting reticle (rendered in 3D) follows the rock,
+  // so the center crosshair fades to a faint bore-axis dot to avoid clutter.
+  if (locked) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
+        <div
+          className="w-1 h-1 rounded-full"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.35)',
+            boxShadow: '0 0 4px rgba(255,255,255,0.4)',
+          }}
+        />
+      </div>
+    )
+  }
+
+  const lineColor = 'rgba(255, 255, 255, 0.6)'
+  const glow = '0 0 6px rgba(0, 255, 255, 0.3)'
 
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">

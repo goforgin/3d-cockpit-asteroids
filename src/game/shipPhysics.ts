@@ -41,7 +41,7 @@ export const updateShipPhysics = (ship: Ship, deltaTime: number): Ship => {
   const right = inputManager.isKeyHeld('arrowright')
   const up = inputManager.isKeyHeld('arrowup')
   const down = inputManager.isKeyHeld('arrowdown')
-  const thrust = inputManager.isKeyHeld('alt')
+  const thrust = inputManager.isKeyHeld('x')
 
   // Defensive default so older ship objects without angularVelocity don't NaN.
   const prevAngular = ship.angularVelocity ?? { yaw: 0, pitch: 0 }
@@ -101,7 +101,7 @@ export const updateShipPhysics = (ship: Ship, deltaTime: number): Ship => {
     if (newShip.angularVelocity.pitch < 0) newShip.angularVelocity.pitch = 0
   }
 
-  // --- Thrust (Alt held) ---
+  // --- Thrust (X held) ---
   if (thrust) {
     const forward = getForwardVector(newShip.rotation.yaw, newShip.rotation.pitch)
     newShip.velocity = vectorAdd(newShip.velocity, vectorMult(forward, THRUST_ACCEL * deltaTime))

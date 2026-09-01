@@ -116,8 +116,8 @@ export const useGameSimulation = () => {
     // Check for bonus life
     checkBonusLife()
     
-    // Thrust audio (Alt key)
-    const isThrusting = inputManager.isKeyHeld('alt')
+    // Thrust audio (X key)
+    const isThrusting = inputManager.isKeyHeld('x')
     if (isThrusting) {
       audioManager.startThrust()
       // Calculate speed ratio for volume modulation

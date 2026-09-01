@@ -124,11 +124,11 @@ class FallbackSynthesizer {
 
   // Start thrust loop
   startThrust() {
+    // Already rumbling — do nothing (this is called every frame while held).
+    if (this.thrustOsc) return
+
     try {
       const ctx = this.ensureContext()
-
-      // Stop existing thrust if any
-      this.stopThrust()
 
       // Create low rumble
       this.thrustOsc = ctx.createOscillator()

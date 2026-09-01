@@ -41,7 +41,7 @@ export const GameOverlay = ({ gameState }: GameOverlayProps) => {
             </p>
             <div className="text-sm text-gray-400 mt-8 space-y-1 font-mono">
               <p>ARROWS: Steer</p>
-              <p>ALT: Thrust</p>
+              <p>X: Thrust</p>
               <p>SPACE: Fire</p>
               <p>Z: Shield</p>
               <p>SHIFT: Hyperspace</p>

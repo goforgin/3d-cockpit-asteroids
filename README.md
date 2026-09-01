@@ -19,7 +19,7 @@ Open [http://localhost:5173](http://localhost:5173)
 | Escape | Pause / Resume |
 | M | Mute / Unmute |
 | Arrow keys | Rotate ship |
-| Alt | Thrust |
+| X | Thrust |
 | Space | Fire |
 | Z | Shield |
 | Shift | Hyperspace |
