@@ -23,6 +23,7 @@ interface GameStore {
   spawnExplosion: (position: { x: number; y: number; z: number }) => void
   removeAsteroidAndSplit: (id: string) => void
   tryFireLaser: () => void
+  setLockedTarget: (id: string | null) => void
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -45,6 +46,7 @@ export const useGameStore = create<GameStore>((set) => ({
       hyperspaceCooldownUntil: 0,
     },
     lastShotTime: 0,
+    lockedAsteroidId: null,
   },
   
   startGame: () => set({
@@ -67,6 +69,7 @@ export const useGameStore = create<GameStore>((set) => ({
         hyperspaceCooldownUntil: 0,
       },
       lastShotTime: 0,
+      lockedAsteroidId: null,
     }
   }),
   
@@ -221,6 +224,14 @@ export const useGameStore = create<GameStore>((set) => ({
   updateShip: (ship) => set((state) => ({
     state: { ...state.state, ship }
   })),
+
+  // Only writes when the lock actually changes so subscribers (the crosshair)
+  // don't re-render every frame.
+  setLockedTarget: (id) => set((state) =>
+    state.state.lockedAsteroidId === id
+      ? state
+      : { state: { ...state.state, lockedAsteroidId: id } }
+  ),
   
   updateAsteroids: (asteroids) => set((state) => ({
     state: { ...state.state, asteroids }

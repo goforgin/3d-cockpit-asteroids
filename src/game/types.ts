@@ -66,6 +66,7 @@ export interface GameState {
   explosions: Explosion[]
   ship: Ship
   lastShotTime: number
+  lockedAsteroidId: string | null   // asteroid currently under the crosshair
 }
 
 export interface WaveConfig {

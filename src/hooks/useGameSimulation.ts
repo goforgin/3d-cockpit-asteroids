@@ -7,7 +7,11 @@ import { updateShipPhysics } from '../game/shipPhysics'
 import { tryActivateShield, isShieldActive, handleShieldHit } from '../game/shieldSystem'
 import { tryHyperspace } from '../game/hyperspaceSystem'
 import { audioManager } from '../audio/audioManager'
-import { SHIP_RADIUS, SCORE_LARGE, SCORE_MEDIUM, SCORE_SMALL, SCORE_BONUS_SHIP, MAX_SPEED } from '../game/constants'
+import { getLockedAsteroidId } from '../game/targeting'
+import { SHIP_RADIUS, SCORE_LARGE, SCORE_MEDIUM, SCORE_SMALL, SCORE_BONUS_SHIP, MAX_SPEED, FIRE_RATE } from '../game/constants'
+
+const scoreForType = (type: 'large' | 'medium' | 'small'): number =>
+  type === 'large' ? SCORE_LARGE : type === 'medium' ? SCORE_MEDIUM : SCORE_SMALL
 
 export const useGameSimulation = () => {
   const simulationTick = useCallback((deltaTime: number) => {
@@ -59,10 +63,31 @@ export const useGameSimulation = () => {
     })).filter(laser => laser.lifetime > 0)
     
     useGameStore.getState().updateLasers(lasers)
-    
+
+    // Update lock-on target (asteroid under the crosshair)
+    const aimState = useGameStore.getState().state
+    const lockedId = getLockedAsteroidId(aimState.ship, aimState.asteroids)
+    useGameStore.getState().setLockedTarget(lockedId)
+
     // Check for laser firing (Space key)
     if (inputManager.isKeyDown(' ')) {
+      const preFire = useGameStore.getState().state
+      const fireRateMs = 1000 / FIRE_RATE
+      const willFire = now - preFire.lastShotTime >= fireRateMs
+
+      // Fire the visual bolt + sound + rate limit
       useGameStore.getState().tryFireLaser()
+
+      // Locked on: firing instantly destroys the targeted rock.
+      if (willFire && preFire.lockedAsteroidId) {
+        const target = preFire.asteroids.find((a) => a.id === preFire.lockedAsteroidId)
+        if (target) {
+          useGameStore.getState().spawnExplosion(target.position)
+          useGameStore.getState().addScore(scoreForType(target.type))
+          useGameStore.getState().removeAsteroidAndSplit(target.id)
+          audioManager.playExplosion()
+        }
+      }
     }
     
     // Check collisions with fresh state
