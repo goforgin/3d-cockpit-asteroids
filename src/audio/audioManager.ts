@@ -67,33 +67,51 @@ class FallbackSynthesizer {
     }
   }
 
-  // Crunch explosion sound
+  // Punchy "rock shatter": a filtered noise crunch layered with a low boom.
   playExplosion() {
     try {
       const ctx = this.ensureContext()
-      const bufferSize = ctx.sampleRate * 0.4
+      const now = ctx.currentTime
+      const dur = 0.55
+
+      // --- Noise crunch ---
+      const bufferSize = Math.floor(ctx.sampleRate * dur)
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
       const data = buffer.getChannelData(0)
-
       for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2)
+        // Sharp attack, exponential decay envelope on the noise.
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2.2)
       }
-
       const noise = ctx.createBufferSource()
       noise.buffer = buffer
 
-      const filter = ctx.createBiquadFilter()
-      filter.type = 'lowpass'
-      filter.frequency.value = 1000
+      const noiseFilter = ctx.createBiquadFilter()
+      noiseFilter.type = 'lowpass'
+      // Sweep the cutoff down for a "debris settling" feel.
+      noiseFilter.frequency.setValueAtTime(1800, now)
+      noiseFilter.frequency.exponentialRampToValueAtTime(250, now + dur)
 
-      const gain = ctx.createGain()
-      gain.gain.setValueAtTime(0.5, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4)
+      const noiseGain = ctx.createGain()
+      noiseGain.gain.setValueAtTime(0.7, now)
+      noiseGain.gain.exponentialRampToValueAtTime(0.01, now + dur)
 
-      noise.connect(filter)
-      filter.connect(gain)
-      gain.connect(ctx.destination)
-      noise.start()
+      noise.connect(noiseFilter)
+      noiseFilter.connect(noiseGain)
+      noiseGain.connect(ctx.destination)
+      noise.start(now)
+
+      // --- Low boom ---
+      const boom = ctx.createOscillator()
+      const boomGain = ctx.createGain()
+      boom.type = 'sine'
+      boom.frequency.setValueAtTime(130, now)
+      boom.frequency.exponentialRampToValueAtTime(45, now + 0.4)
+      boomGain.gain.setValueAtTime(0.6, now)
+      boomGain.gain.exponentialRampToValueAtTime(0.01, now + 0.45)
+      boom.connect(boomGain)
+      boomGain.connect(ctx.destination)
+      boom.start(now)
+      boom.stop(now + 0.45)
     } catch (e) {
       // Ignore audio errors
     }
