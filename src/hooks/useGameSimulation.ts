@@ -8,7 +8,12 @@ import { tryActivateShield, isShieldActive, handleShieldHit } from '../game/shie
 import { tryHyperspace } from '../game/hyperspaceSystem'
 import { audioManager } from '../audio/audioManager'
 import { getLockedAsteroidId } from '../game/targeting'
-import { SHIP_RADIUS, SCORE_LARGE, SCORE_MEDIUM, SCORE_SMALL, SCORE_BONUS_SHIP, MAX_SPEED, FIRE_RATE } from '../game/constants'
+import { updateEnemies, updateEnemyBullets, spawnSaucer, getSaucerDifficulty } from '../game/enemies'
+import { wrappedDistance } from '../game/math'
+import {
+  SHIP_RADIUS, SCORE_LARGE, SCORE_MEDIUM, SCORE_SMALL, SCORE_BONUS_SHIP, MAX_SPEED, FIRE_RATE,
+  PLAY_SPACE_SIZE, MAX_SAUCERS, SAUCER_SMALL_DELAY, SCORE_SAUCER_LARGE, SCORE_SAUCER_SMALL, ENEMY_BULLET_RADIUS,
+} from '../game/constants'
 
 const scoreForType = (type: 'large' | 'medium' | 'small'): number =>
   type === 'large' ? SCORE_LARGE : type === 'medium' ? SCORE_MEDIUM : SCORE_SMALL
@@ -63,6 +68,36 @@ export const useGameSimulation = () => {
     })).filter(laser => laser.lifetime > 0)
     
     useGameStore.getState().updateLasers(lasers)
+
+    // --- Enemy saucers ---
+    const waveElapsed = (now - state.waveStartTime) / 1000
+
+    // Move + fire existing saucers.
+    const enemyUpdate = updateEnemies(state.enemies, newShip.position, deltaTime, now, waveElapsed)
+    useGameStore.getState().setEnemies(enemyUpdate.enemies)
+    if (enemyUpdate.newBullets.length > 0) {
+      useGameStore.getState().addEnemyBullets(enemyUpdate.newBullets)
+      audioManager.playEnemyFire(enemyUpdate.newBullets.some((b) => b.fromSmall))
+    }
+
+    // Advance enemy bullets.
+    useGameStore.getState().setEnemyBullets(
+      updateEnemyBullets(useGameStore.getState().state.enemyBullets, deltaTime)
+    )
+
+    // Spawn saucers on a shrinking schedule so you can't camp a wave forever.
+    const spawnState = useGameStore.getState().state
+    if (now >= spawnState.nextSaucerAt && spawnState.enemies.length < MAX_SAUCERS) {
+      const type = waveElapsed >= SAUCER_SMALL_DELAY ? 'small' : 'large'
+      const saucer = spawnSaucer(type, now, getSaucerDifficulty(waveElapsed))
+      useGameStore.getState().setEnemies([...spawnState.enemies, saucer])
+      const gap =
+        type === 'large'
+          ? 10000
+          : Math.max(4000, 9000 - (waveElapsed - SAUCER_SMALL_DELAY) * 120)
+      useGameStore.getState().scheduleNextSaucer(now + gap)
+      audioManager.playSaucerSpawn()
+    }
 
     // Update lock-on target. The lock is "sticky": once acquired it stays on
     // that rock until the player presses an arrow key to re-aim (or the target
@@ -157,6 +192,73 @@ export const useGameSimulation = () => {
       }
     }
     
+    // Enemy bullets vs ship
+    if (now >= state.ship.invulnerableUntil) {
+      for (const bullet of state.enemyBullets) {
+        if (
+          wrappedDistance(bullet.position, state.ship.position, PLAY_SPACE_SIZE) <
+          SHIP_RADIUS + ENEMY_BULLET_RADIUS
+        ) {
+          useGameStore.getState().setEnemyBullets(
+            useGameStore.getState().state.enemyBullets.filter((b) => b.id !== bullet.id)
+          )
+          if (isShieldActive(state.ship, now)) {
+            useGameStore.getState().updateShip(handleShieldHit(state.ship))
+            audioManager.playShieldHit()
+          } else {
+            useGameStore.getState().loseLife()
+          }
+          break
+        }
+      }
+    }
+
+    // Saucer body vs ship
+    if (now >= useGameStore.getState().state.ship.invulnerableUntil) {
+      const shipNow = useGameStore.getState().state.ship
+      for (const enemy of useGameStore.getState().state.enemies) {
+        if (
+          wrappedDistance(enemy.position, shipNow.position, PLAY_SPACE_SIZE) <
+          enemy.radius + SHIP_RADIUS
+        ) {
+          if (isShieldActive(shipNow, now)) {
+            useGameStore.getState().updateShip(handleShieldHit(shipNow))
+            audioManager.playShieldHit()
+          } else {
+            useGameStore.getState().loseLife()
+          }
+          break
+        }
+      }
+    }
+
+    // Player lasers vs saucers
+    {
+      const pLasers = useGameStore.getState().state.lasers
+      const enemies = useGameStore.getState().state.enemies
+      for (const laser of pLasers) {
+        for (const enemy of enemies) {
+          if (
+            wrappedDistance(laser.position, enemy.position, PLAY_SPACE_SIZE) <
+            enemy.radius + 1
+          ) {
+            useGameStore.getState().spawnExplosion(enemy.position)
+            audioManager.playExplosion()
+            useGameStore.getState().addScore(
+              enemy.type === 'large' ? SCORE_SAUCER_LARGE : SCORE_SAUCER_SMALL
+            )
+            useGameStore.getState().setEnemies(
+              useGameStore.getState().state.enemies.filter((e) => e.id !== enemy.id)
+            )
+            useGameStore.getState().updateLasers(
+              useGameStore.getState().state.lasers.filter((l) => l.id !== laser.id)
+            )
+            break
+          }
+        }
+      }
+    }
+
     // Lasers vs asteroids
     const lasers = useGameStore.getState().state.lasers
     const asteroids = useGameStore.getState().state.asteroids

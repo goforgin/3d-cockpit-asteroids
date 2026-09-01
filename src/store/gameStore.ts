@@ -1,9 +1,9 @@
 import { create } from 'zustand'
-import { GameState } from '../game/types'
+import { GameState, EnemySaucer, EnemyBullet } from '../game/types'
 import { generateWave } from '../game/waves'
 import { destroyAsteroid } from '../game/asteroids'
 import { spawnExplosion as buildExplosion, spawnShipExplosion } from '../game/explosions'
-import { RESPAWN_INVULN, SCORE_BONUS_SHIP, FIRE_RATE, LASER_SPEED, MAX_LASERS, LASER_LIFETIME, SHIELD_HITS_PER_SHIP } from '../game/constants'
+import { RESPAWN_INVULN, SCORE_BONUS_SHIP, FIRE_RATE, LASER_SPEED, MAX_LASERS, LASER_LIFETIME, SHIELD_HITS_PER_SHIP, SAUCER_LARGE_DELAY } from '../game/constants'
 import { audioManager } from '../audio/audioManager'
 import { getForwardVector } from '../game/shipPhysics'
 
@@ -28,6 +28,10 @@ interface GameStore {
   removeAsteroidAndSplit: (id: string) => void
   tryFireLaser: () => void
   setLockedTarget: (id: string | null) => void
+  setEnemies: (enemies: EnemySaucer[]) => void
+  setEnemyBullets: (bullets: EnemyBullet[]) => void
+  addEnemyBullets: (bullets: EnemyBullet[]) => void
+  scheduleNextSaucer: (at: number) => void
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -39,6 +43,8 @@ export const useGameStore = create<GameStore>((set) => ({
     asteroids: [],
     lasers: [],
     explosions: [],
+    enemies: [],
+    enemyBullets: [],
     ship: {
       position: { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
@@ -52,6 +58,8 @@ export const useGameStore = create<GameStore>((set) => ({
     lastShotTime: 0,
     lockedAsteroidId: null,
     shipHitAt: 0,
+    waveStartTime: 0,
+    nextSaucerAt: 0,
   },
 
   muted: false,
@@ -71,6 +79,8 @@ export const useGameStore = create<GameStore>((set) => ({
       asteroids: generateWave(1),
       lasers: [],
       explosions: [],
+      enemies: [],
+      enemyBullets: [],
       ship: {
         position: { x: 0, y: 0, z: 0 },
         velocity: { x: 0, y: 0, z: 0 },
@@ -84,6 +94,8 @@ export const useGameStore = create<GameStore>((set) => ({
       lastShotTime: 0,
       lockedAsteroidId: null,
       shipHitAt: 0,
+      waveStartTime: Date.now(),
+      nextSaucerAt: Date.now() + SAUCER_LARGE_DELAY * 1000,
     }
   }),
   
@@ -140,6 +152,8 @@ export const useGameStore = create<GameStore>((set) => ({
       asteroids: state.state.asteroids,
       lasers: [],
       explosions: [...state.state.explosions, shipBlast],
+      // Clear enemy fire so you don't instantly die again on respawn.
+      enemyBullets: [],
     }
     
     // Play ship explosion sound
@@ -158,6 +172,11 @@ export const useGameStore = create<GameStore>((set) => ({
       ...state.state,
       wave: waveNumber,
       asteroids: generateWave(waveNumber),
+      // Fresh wave: clear saucers/fire and restart the spawn clock.
+      enemies: [],
+      enemyBullets: [],
+      waveStartTime: Date.now(),
+      nextSaucerAt: Date.now() + SAUCER_LARGE_DELAY * 1000,
     }
   })),
   
@@ -262,6 +281,22 @@ export const useGameStore = create<GameStore>((set) => ({
   
   updateExplosions: (explosions) => set((state) => ({
     state: { ...state.state, explosions }
+  })),
+
+  setEnemies: (enemies) => set((state) => ({
+    state: { ...state.state, enemies }
+  })),
+
+  setEnemyBullets: (enemyBullets) => set((state) => ({
+    state: { ...state.state, enemyBullets }
+  })),
+
+  addEnemyBullets: (bullets) => set((state) => ({
+    state: { ...state.state, enemyBullets: [...state.state.enemyBullets, ...bullets] }
+  })),
+
+  scheduleNextSaucer: (at) => set((state) => ({
+    state: { ...state.state, nextSaucerAt: at }
   })),
   
   spawnExplosion: (position) => set((state) => ({

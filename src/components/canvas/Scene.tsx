@@ -10,6 +10,9 @@ import { ShieldBubble } from './ShieldBubble'
 import { ExplosionField } from './ExplosionField'
 import { ThrustParticles } from './ThrustParticles'
 import { LockReticle } from './LockReticle'
+import { Planets } from './Planets'
+import { EnemyField } from './EnemyField'
+import { EnemyBulletField } from './EnemyBulletField'
 
 export const Scene = () => {
   const starRef = useRef<THREE.Points>(null!)
@@ -41,8 +44,11 @@ export const Scene = () => {
       <directionalLight position={[100, 120, 60]} intensity={1.3} color="#ffffff" />
       {/* Cool rim fill from the opposite side */}
       <directionalLight position={[-120, -60, -100]} intensity={0.5} color="#88aaff" />
+      <Planets />
       <Ship />
       <AsteroidField />
+      <EnemyField />
+      <EnemyBulletField />
       <LaserField />
       <ShieldBubble />
       <ExplosionField />

@@ -42,6 +42,27 @@ export interface Laser {
   lifetime: number
 }
 
+export type SaucerType = 'large' | 'small'
+
+export interface EnemySaucer {
+  id: string
+  type: SaucerType
+  position: Vector3
+  velocity: Vector3
+  radius: number
+  spawnedAt: number
+  nextTurnAt: number  // when the saucer next changes heading
+  nextFireAt: number  // when the saucer next shoots
+}
+
+export interface EnemyBullet {
+  id: string
+  position: Vector3
+  velocity: Vector3
+  lifetime: number
+  fromSmall: boolean  // small-saucer bullets look/behave nastier
+}
+
 export interface ExplosionParticle {
   position: Vector3
   velocity: Vector3
@@ -66,10 +87,14 @@ export interface GameState {
   asteroids: Asteroid[]
   lasers: Laser[]
   explosions: Explosion[]
+  enemies: EnemySaucer[]
+  enemyBullets: EnemyBullet[]
   ship: Ship
   lastShotTime: number
   lockedAsteroidId: string | null   // asteroid currently under the crosshair
   shipHitAt: number                 // timestamp of last ship destruction (for VFX/overlay)
+  waveStartTime: number             // when the current wave began (drives saucer spawns)
+  nextSaucerAt: number              // timestamp the next saucer is allowed to spawn
 }
 
 export interface WaveConfig {

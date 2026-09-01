@@ -14,9 +14,10 @@ const BLIP_SIZES = {
 }
 
 export const Radar = () => {
-  const { ship, asteroids } = useGameStore((state) => ({
+  const { ship, asteroids, enemies } = useGameStore((state) => ({
     ship: state.state.ship,
     asteroids: state.state.asteroids,
+    enemies: state.state.enemies,
   }))
   
   // Get radar blips
@@ -25,6 +26,16 @@ export const Radar = () => {
     ship.rotation.yaw,
     ship.rotation.pitch,
     asteroids,
+    WORLD_HALF_SIZE
+  )
+
+  // Enemy saucers get their own (red) blips. getRadarBlips only reads
+  // position/type/id, which EnemySaucer provides.
+  const enemyBlips = getRadarBlips(
+    ship.position,
+    ship.rotation.yaw,
+    ship.rotation.pitch,
+    enemies as unknown as Parameters<typeof getRadarBlips>[3],
     WORLD_HALF_SIZE
   )
   
@@ -145,6 +156,24 @@ export const Radar = () => {
                 }}
               />
             </div>
+          )
+        })}
+
+        {/* Enemy saucer blips (red, pulsing) */}
+        {enemyBlips.map((blip) => {
+          const size = (BLIP_SIZES[blip.size] ?? 4) + 2
+          return (
+            <div
+              key={`enemy-${blip.id}`}
+              className="absolute z-20 rounded-full bg-red-500 animate-pulse shadow-[0_0_6px_#ff2222]"
+              style={{
+                left: blip.x * RADAR_SIZE,
+                top: blip.y * RADAR_SIZE,
+                width: size,
+                height: size,
+                transform: 'translate(-50%, -50%)',
+              }}
+            />
           )
         })}
         

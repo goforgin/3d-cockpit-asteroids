@@ -13,6 +13,7 @@ export const Ship = () => {
       const cam = camera as THREE.PerspectiveCamera
       cam.fov = 75
       cam.near = 0.05
+      cam.far = 5000 // keep distant background planets visible
       cam.updateProjectionMatrix()
     }
     // Match the Euler order used to derive the forward vector (see shipPhysics).

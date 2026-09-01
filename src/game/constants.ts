@@ -28,12 +28,40 @@ export const RESPAWN_INVULN = 3.0                 // seconds
 // Compact toroidal cube: rocks are always close and constantly wrap through the
 // zone, so you must keep dodging. Fly off one edge and you reappear on the
 // opposite side (radar included).
-export const PLAY_SPACE_SIZE = 150                // 150x150x150 units
+export const PLAY_SPACE_SIZE = 110                // 110x110x110 units
 export const SHIP_RADIUS = 3.0                    // collision radius
 
 // Asteroid drift speed (units/s). Spawned rocks head roughly toward the ship.
-export const ASTEROID_MIN_SPEED = 14
-export const ASTEROID_MAX_SPEED = 26
+export const ASTEROID_MIN_SPEED = 16
+export const ASTEROID_MAX_SPEED = 30
+
+// --- Enemy saucers (classic Asteroids UFOs) ---
+export const SCORE_SAUCER_LARGE = 200
+export const SCORE_SAUCER_SMALL = 1000
+
+export const SAUCER_LARGE_RADIUS = 5
+export const SAUCER_SMALL_RADIUS = 2.6
+
+// The big, easy saucer appears first; if you dawdle the small, aggressive one
+// shows up and everything escalates.
+export const SAUCER_LARGE_DELAY = 6               // seconds into a wave
+export const SAUCER_SMALL_DELAY = 15              // seconds into a wave
+export const MAX_SAUCERS = 2
+
+// Movement speeds (units/s)
+export const SAUCER_LARGE_SPEED = 20
+export const SAUCER_SMALL_SPEED_MIN = 28
+export const SAUCER_SMALL_SPEED_MAX = 46
+
+// Enemy bullets
+export const ENEMY_BULLET_SPEED_LARGE = 42
+export const ENEMY_BULLET_SPEED_SMALL_MIN = 48
+export const ENEMY_BULLET_SPEED_SMALL_MAX = 74
+export const ENEMY_BULLET_LIFETIME = 3.0          // seconds
+export const ENEMY_BULLET_RADIUS = 0.8
+
+// How long (seconds) it takes the small saucer to ramp to full nastiness.
+export const SAUCER_ESCALATION_TIME = 45
 
 // Asteroid properties
 export const ASTEROID_LARGE_RADIUS = 8

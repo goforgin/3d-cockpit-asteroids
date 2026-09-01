@@ -117,6 +117,54 @@ class FallbackSynthesizer {
     }
   }
 
+  // Menacing blip for enemy fire.
+  playEnemyFire(fromSmall: boolean) {
+    try {
+      const ctx = this.ensureContext()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.type = 'square'
+      const start = fromSmall ? 320 : 200
+      osc.frequency.setValueAtTime(start, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(start * 0.4, ctx.currentTime + 0.12)
+
+      gain.gain.setValueAtTime(0.16, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.12)
+    } catch (e) {
+      // Ignore audio errors
+    }
+  }
+
+  // Descending warble when a saucer warps in.
+  playSaucerSpawn() {
+    try {
+      const ctx = this.ensureContext()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(180, ctx.currentTime)
+      osc.frequency.linearRampToValueAtTime(520, ctx.currentTime + 0.25)
+      osc.frequency.linearRampToValueAtTime(300, ctx.currentTime + 0.5)
+
+      gain.gain.setValueAtTime(0.2, ctx.currentTime)
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.5)
+    } catch (e) {
+      // Ignore audio errors
+    }
+  }
+
   // Bass thump for ship explosion
   playShipExplode() {
     try {
@@ -385,6 +433,17 @@ export class AudioManager {
   // Play ship explosion sound
   playShipExplode() {
     this.playSound('shipExplode', () => this.synthesizer.playShipExplode())
+  }
+
+  // Enemy fire / saucer warp-in (synth only)
+  playEnemyFire(fromSmall: boolean) {
+    if (this.muted) return
+    this.synthesizer.playEnemyFire(fromSmall)
+  }
+
+  playSaucerSpawn() {
+    if (this.muted) return
+    this.synthesizer.playSaucerSpawn()
   }
 
   // Start thrust loop
