@@ -25,10 +25,10 @@ export const LaserBolt = ({ position, velocity }: LaserProps) => {
   target.y /= mag
   target.z /= mag
   
-  // Align cylinder with velocity direction
-  // Cylinder is along Z axis, so we need to rotate
+  // Align cylinder with velocity direction.
+  // cylinderGeometry's long axis is Y, so map +Y onto the travel direction.
   const quaternion = new THREE.Quaternion()
-  quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(target.x, target.y, target.z))
+  quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(target.x, target.y, target.z))
   
   return (
     <>

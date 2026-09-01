@@ -4,6 +4,7 @@ import { generateWave } from '../game/waves'
 import { destroyAsteroid } from '../game/asteroids'
 import { RESPAWN_INVULN, SCORE_BONUS_SHIP, FIRE_RATE, LASER_SPEED, MAX_LASERS, LASER_LIFETIME, SHIELD_HITS_PER_SHIP } from '../game/constants'
 import { audioManager } from '../audio/audioManager'
+import { getForwardVector } from '../game/shipPhysics'
 
 interface GameStore {
   state: GameState
@@ -175,12 +176,18 @@ export const useGameStore = create<GameStore>((set) => ({
     }
     
     const ship = state.state.ship
-    const forward = {
-      x: -Math.sin(ship.rotation.yaw) * Math.cos(ship.rotation.pitch),
-      y: -Math.sin(ship.rotation.pitch),
-      z: Math.cos(ship.rotation.yaw) * Math.cos(ship.rotation.pitch),
+    // Fire along the exact direction the cockpit/crosshair points.
+    const forward = getForwardVector(ship.rotation.yaw, ship.rotation.pitch)
+
+    // Spawn the bolt slightly ahead of the cockpit so it reads as coming from
+    // the ship's nose rather than materializing on top of the camera.
+    const muzzleOffset = 3
+    const spawnPosition = {
+      x: ship.position.x + forward.x * muzzleOffset,
+      y: ship.position.y + forward.y * muzzleOffset,
+      z: ship.position.z + forward.z * muzzleOffset,
     }
-    
+
     // Play laser sound
     import('../audio/audioManager').then(({ audioManager }) => {
       audioManager.playLaser()
@@ -193,7 +200,7 @@ export const useGameStore = create<GameStore>((set) => ({
           ...state.state.lasers,
           {
             id: `laser-${Date.now()}`,
-            position: ship.position,
+            position: spawnPosition,
             velocity: {
               x: forward.x * LASER_SPEED,
               y: forward.y * LASER_SPEED,

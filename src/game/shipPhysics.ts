@@ -1,5 +1,6 @@
 // Ship physics and movement logic
 
+import * as THREE from 'three'
 import { Ship } from './types'
 import { Vector3 } from './types'
 import { inputManager } from './input'
@@ -13,28 +14,20 @@ import {
 } from './constants'
 import { wrapPosition, vectorAdd, vectorMult, vectorNormalize } from './math'
 
-// Compute forward vector from yaw/pitch (Three.js: ship nose = -Z local)
+// Reusable temporaries so we don't allocate every frame.
+const _forwardEuler = new THREE.Euler()
+const _forwardVec = new THREE.Vector3()
+
+// Compute the ship's forward direction (where the cockpit/crosshair points).
+//
+// This MUST match exactly how the camera is oriented in Ship.tsx, otherwise
+// lasers and thrust won't line up with the crosshair. The camera is rotated
+// with `camera.rotation.set(pitch, yaw, 0, 'YXZ')`, so we derive forward by
+// applying the identical Euler to Three.js' default camera-forward (-Z).
 export const getForwardVector = (yaw: number, pitch: number): Vector3 => {
-  // Yaw rotation around Y axis, pitch around X axis
-  // Forward is -Z in local space
-  const cy = Math.cos(yaw)
-  const sy = Math.sin(yaw)
-  const cp = Math.cos(pitch)
-  const sp = Math.sin(pitch)
-  
-  // Transform -Z local vector by rotation
-  // After yaw: x' = -z*sin(yaw), z' = z*cos(yaw)
-  // After pitch: y' = y*cos(pitch) - z'*sin(pitch), z'' = y*sin(pitch) + z'*cos(pitch)
-  // For -Z local: x=0, y=0, z=-1
-  // After yaw: x=0, y=0, z=1
-  // After pitch: x=0, y=-sin(pitch), z=cos(pitch)
-  // Then apply yaw: x=-sin(yaw)*cos(pitch), y=-sin(pitch), z=cos(yaw)*cos(pitch)
-  
-  return {
-    x: -sy * cp,
-    y: -sp,
-    z: cy * cp,
-  }
+  _forwardEuler.set(pitch, yaw, 0, 'YXZ')
+  _forwardVec.set(0, 0, -1).applyEuler(_forwardEuler)
+  return { x: _forwardVec.x, y: _forwardVec.y, z: _forwardVec.z }
 }
 
 export const updateShipPhysics = (ship: Ship, deltaTime: number): Ship => {

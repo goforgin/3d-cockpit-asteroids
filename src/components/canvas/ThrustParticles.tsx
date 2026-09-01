@@ -26,12 +26,12 @@ export const ThrustParticles = () => {
     const isThrusting = inputManager.isKeyHeld('alt')
     
     if (isThrusting) {
-      // Emit new particles
+      // Emit new particles from behind the ship (opposite the forward axis).
       const forward = getForwardVector(ship.rotation.yaw, ship.rotation.pitch)
       const rearPosition = {
-        x: ship.position.x + forward.x * 1.5,
-        y: ship.position.y + forward.y * 1.5,
-        z: ship.position.z + forward.z * 1.5,
+        x: ship.position.x - forward.x * 1.5,
+        y: ship.position.y - forward.y * 1.5,
+        z: ship.position.z - forward.z * 1.5,
       }
       
       // Add new particles
