@@ -20,5 +20,5 @@ export const updateExplosion = (explosion: ExplosionType, deltaTime: number): Ex
 }
 
 export const isExplosionExpired = (explosion: ExplosionType, now: number): boolean => {
-  return now > explosion.createdAt + 600 // 0.6 seconds
+  return now > explosion.createdAt + (explosion.duration ?? 600)
 }

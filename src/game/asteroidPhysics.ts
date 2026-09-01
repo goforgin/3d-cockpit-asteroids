@@ -2,6 +2,7 @@
 
 import { Asteroid } from './types'
 import { wrapPosition } from './math'
+import { PLAY_SPACE_SIZE } from './constants'
 
 export const updateAsteroids = (
   asteroids: Asteroid[],
@@ -16,7 +17,7 @@ export const updateAsteroids = (
     }
     
     // Apply wrap at boundaries
-    const wrappedPosition = wrapPosition(newPosition, 400) // PLAY_SPACE_SIZE = 400
+    const wrappedPosition = wrapPosition(newPosition, PLAY_SPACE_SIZE)
     
     // Update rotation
     const newRotation = {

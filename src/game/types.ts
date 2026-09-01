@@ -54,6 +54,8 @@ export interface Explosion {
   position: Vector3
   particles: ExplosionParticle[]
   createdAt: number
+  kind?: 'rock' | 'ship'
+  duration?: number // ms before culled (defaults to 600)
 }
 
 export interface GameState {
@@ -67,6 +69,7 @@ export interface GameState {
   ship: Ship
   lastShotTime: number
   lockedAsteroidId: string | null   // asteroid currently under the crosshair
+  shipHitAt: number                 // timestamp of last ship destruction (for VFX/overlay)
 }
 
 export interface WaveConfig {

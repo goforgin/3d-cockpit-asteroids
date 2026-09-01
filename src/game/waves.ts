@@ -2,7 +2,12 @@
 
 import { Vector3 } from './types'
 import { randomRange, randomOnSphere } from './math'
-import { ASTEROID_LARGE_RADIUS } from './constants'
+import {
+  ASTEROID_LARGE_RADIUS,
+  ASTEROID_MIN_SPEED,
+  ASTEROID_MAX_SPEED,
+  PLAY_SPACE_SIZE,
+} from './constants'
 
 export interface SpawnedAsteroid {
   id: string
@@ -26,12 +31,33 @@ export const getWaveLargeCount = (waveNumber: number): number => {
 export const generateWave = (waveNumber: number): SpawnedAsteroid[] => {
   const count = getWaveLargeCount(waveNumber)
   const asteroids: SpawnedAsteroid[] = []
-  
+  const half = PLAY_SPACE_SIZE / 2
+
   for (let i = 0; i < count; i++) {
+    // Spawn out toward the edges of the compact zone (but inside it), so rocks
+    // start away from the ship and drift inward.
+    const spawnRadius = randomRange(half * 0.6, half * 0.92)
+    const position = randomOnSphere(spawnRadius)
+
+    // Head roughly toward the origin (where the ship starts) with some spread,
+    // so if you sit still, something will eventually reach you.
+    const speed = randomRange(ASTEROID_MIN_SPEED, ASTEROID_MAX_SPEED)
+    const inward = {
+      x: -position.x / spawnRadius,
+      y: -position.y / spawnRadius,
+      z: -position.z / spawnRadius,
+    }
+    const jitter = randomOnSphere(1)
+    const velocity = {
+      x: (inward.x * 0.75 + jitter.x * 0.25) * speed,
+      y: (inward.y * 0.75 + jitter.y * 0.25) * speed,
+      z: (inward.z * 0.75 + jitter.z * 0.25) * speed,
+    }
+
     asteroids.push({
       id: `asteroid-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
-      position: randomOnSphere(150), // Spawn on sphere shell radius 150
-      velocity: randomOnSphere(randomRange(5, 15)), // Random direction, magnitude 5-15
+      position,
+      velocity,
       radius: ASTEROID_LARGE_RADIUS,
       type: 'large',
       rotationSpeed: {
@@ -46,6 +72,6 @@ export const generateWave = (waveNumber: number): SpawnedAsteroid[] => {
       },
     })
   }
-  
+
   return asteroids
 }

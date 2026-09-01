@@ -3,6 +3,8 @@ import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGameStore } from '../../store/gameStore'
+import { wrapDelta } from '../../game/math'
+import { PLAY_SPACE_SIZE } from '../../game/constants'
 
 // A red targeting reticle anchored to the locked asteroid's 3D position, so it
 // tracks the rock on screen as the ship and asteroid move. Rendered inside the
@@ -17,8 +19,13 @@ export const LockReticle = () => {
       .getState()
       .state.asteroids.find((a) => a.id === lockedId)
     if (ast) {
+      const ship = useGameStore.getState().state.ship.position
       groupRef.current.visible = true
-      groupRef.current.position.set(ast.position.x, ast.position.y, ast.position.z)
+      groupRef.current.position.set(
+        ship.x + wrapDelta(ast.position.x - ship.x, PLAY_SPACE_SIZE),
+        ship.y + wrapDelta(ast.position.y - ship.y, PLAY_SPACE_SIZE),
+        ship.z + wrapDelta(ast.position.z - ship.z, PLAY_SPACE_SIZE)
+      )
     } else {
       groupRef.current.visible = false
     }

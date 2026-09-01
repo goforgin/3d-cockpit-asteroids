@@ -2,6 +2,8 @@
 
 import { Ship, Asteroid } from './types'
 import { getForwardVector } from './shipPhysics'
+import { wrapDelta } from './math'
+import { PLAY_SPACE_SIZE } from './constants'
 
 // Casts a ray from the ship along its forward axis (the crosshair direction)
 // and returns the id of the nearest asteroid that ray passes through.
@@ -21,22 +23,19 @@ export function getLockedAsteroidId(
   let bestDistance = Infinity
 
   for (const a of asteroids) {
-    const dx = a.position.x - ship.position.x
-    const dy = a.position.y - ship.position.y
-    const dz = a.position.z - ship.position.z
+    // Wrapped offset so rocks across the zone boundary can still be locked.
+    const dx = wrapDelta(a.position.x - ship.position.x, PLAY_SPACE_SIZE)
+    const dy = wrapDelta(a.position.y - ship.position.y, PLAY_SPACE_SIZE)
+    const dz = wrapDelta(a.position.z - ship.position.z, PLAY_SPACE_SIZE)
 
     // Distance along the aim ray to the asteroid's closest approach.
     const t = dx * f.x + dy * f.y + dz * f.z
     if (t <= 0) continue // asteroid is behind the ship
 
-    // Closest point on the ray to the asteroid center.
-    const cx = ship.position.x + f.x * t
-    const cy = ship.position.y + f.y * t
-    const cz = ship.position.z + f.z * t
-
-    const perpX = a.position.x - cx
-    const perpY = a.position.y - cy
-    const perpZ = a.position.z - cz
+    // Perpendicular distance from the asteroid center to the aim ray.
+    const perpX = dx - f.x * t
+    const perpY = dy - f.y * t
+    const perpZ = dz - f.z * t
     const perp = Math.sqrt(perpX * perpX + perpY * perpY + perpZ * perpZ)
 
     if (perp <= a.radius + aimAssist && t < bestDistance) {

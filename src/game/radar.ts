@@ -2,6 +2,8 @@
 
 import { Vector3 } from './types'
 import { Asteroid } from './types'
+import { wrapDelta } from './math'
+import { PLAY_SPACE_SIZE } from './constants'
 
 export interface RadarBlip {
   id: string
@@ -25,10 +27,11 @@ const transformToWorldToLocal = (
   shipYaw: number,
   shipPitch: number
 ): Vector3 => {
-  // First, translate to ship-relative position
-  const relativeX = worldPos.x - shipPosition.x
-  const relativeY = worldPos.y - shipPosition.y
-  const relativeZ = worldPos.z - shipPosition.z
+  // Translate to ship-relative position using the shortest wrap distance, so a
+  // rock just past the left edge shows up entering from the right, etc.
+  const relativeX = wrapDelta(worldPos.x - shipPosition.x, PLAY_SPACE_SIZE)
+  const relativeY = wrapDelta(worldPos.y - shipPosition.y, PLAY_SPACE_SIZE)
+  const relativeZ = wrapDelta(worldPos.z - shipPosition.z, PLAY_SPACE_SIZE)
   
   // Apply inverse yaw rotation (around Y axis)
   // To transform from world to ship space, we rotate by -yaw

@@ -4,6 +4,7 @@ import { GameOverlay } from './GameOverlay'
 import { Radar } from './Radar'
 import { ShieldPips } from './ShieldPips'
 import { AudioIndicator } from './AudioIndicator'
+import { ShipHitOverlay } from './ShipHitOverlay'
 import { useGameStore } from '../../store/gameStore'
 
 export const HUD = () => {
@@ -20,6 +21,8 @@ export const HUD = () => {
           <ShieldPips />
         </>
       )}
+      {/* Ship destruction flash/flames — shows over gameplay and game-over */}
+      <ShipHitOverlay />
       {/* Audio state is always visible so the mute toggle is discoverable */}
       <AudioIndicator />
       <GameOverlay gameState={gameState} />

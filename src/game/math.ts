@@ -19,25 +19,43 @@ export const randomOnSphere = (radius: number): Vector3 => {
 
 export const wrapPosition = (position: Vector3, size: number): Vector3 => {
   const halfSize = size / 2
-  const wrapped: Vector3 = { ...position }
-  
-  if (wrapped.x > halfSize) wrapped.x = -halfSize
-  else if (wrapped.x < -halfSize) wrapped.x = halfSize
-  
-  if (wrapped.y > halfSize) wrapped.y = -halfSize
-  else if (wrapped.y < -halfSize) wrapped.y = halfSize
-  
-  if (wrapped.z > halfSize) wrapped.z = -halfSize
-  else if (wrapped.z < -halfSize) wrapped.z = halfSize
-  
-  return wrapped
+  const wrap = (v: number) => {
+    if (v > halfSize) return v - size
+    if (v < -halfSize) return v + size
+    return v
+  }
+  return { x: wrap(position.x), y: wrap(position.y), z: wrap(position.z) }
 }
+
+// Map a single-axis difference into the shortest wrapped distance on a torus
+// of the given size, i.e. into the range [-size/2, size/2]. Used so a rock near
+// the opposite edge is treated as "just across the boundary" rather than far.
+export const wrapDelta = (delta: number, size: number): number => {
+  const half = size / 2
+  let d = delta
+  if (d > half) d -= size
+  else if (d < -half) d += size
+  return d
+}
+
+// Shortest vector from a -> b accounting for toroidal wrap.
+export const wrappedDelta = (a: Vector3, b: Vector3, size: number): Vector3 => ({
+  x: wrapDelta(b.x - a.x, size),
+  y: wrapDelta(b.y - a.y, size),
+  z: wrapDelta(b.z - a.z, size),
+})
 
 export const distance = (a: Vector3, b: Vector3): number => {
   const dx = a.x - b.x
   const dy = a.y - b.y
   const dz = a.z - b.z
   return Math.sqrt(dx * dx + dy * dy + dz * dz)
+}
+
+// Distance between two points on the toroidal play field (shortest wrap).
+export const wrappedDistance = (a: Vector3, b: Vector3, size: number): number => {
+  const d = wrappedDelta(a, b, size)
+  return Math.sqrt(d.x * d.x + d.y * d.y + d.z * d.z)
 }
 
 export const sphereIntersects = (a: Vector3, ra: number, b: Vector3, rb: number): boolean => {

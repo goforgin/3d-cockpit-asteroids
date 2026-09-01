@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { GameState } from '../game/types'
 import { generateWave } from '../game/waves'
 import { destroyAsteroid } from '../game/asteroids'
+import { spawnExplosion as buildExplosion, spawnShipExplosion } from '../game/explosions'
 import { RESPAWN_INVULN, SCORE_BONUS_SHIP, FIRE_RATE, LASER_SPEED, MAX_LASERS, LASER_LIFETIME, SHIELD_HITS_PER_SHIP } from '../game/constants'
 import { audioManager } from '../audio/audioManager'
 import { getForwardVector } from '../game/shipPhysics'
@@ -50,6 +51,7 @@ export const useGameStore = create<GameStore>((set) => ({
     },
     lastShotTime: 0,
     lockedAsteroidId: null,
+    shipHitAt: 0,
   },
 
   muted: false,
@@ -81,6 +83,7 @@ export const useGameStore = create<GameStore>((set) => ({
       },
       lastShotTime: 0,
       lockedAsteroidId: null,
+      shipHitAt: 0,
     }
   }),
   
@@ -112,24 +115,31 @@ export const useGameStore = create<GameStore>((set) => ({
   }),
   
   loseLife: () => set((state) => {
+    const now = Date.now()
     const newLives = state.state.lives - 1
+    const hitPos = { ...state.state.ship.position }
+
+    // Fiery burst centered on the cockpit — debris flies outward around the
+    // camera. We keep the camera at the hit position (rather than teleporting to
+    // the origin) so the explosion reads as "your ship blew up right here".
+    const shipBlast = spawnShipExplosion(hitPos)
+
     const newState: GameState = {
       ...state.state,
       lives: newLives,
+      shipHitAt: now,
       ship: {
         ...state.state.ship,
-        position: { x: 0, y: 0, z: 0 },
         velocity: { x: 0, y: 0, z: 0 },
-        rotation: { yaw: 0, pitch: 0 },
         angularVelocity: { yaw: 0, pitch: 0 },
-        invulnerableUntil: Date.now() + RESPAWN_INVULN * 1000,
+        invulnerableUntil: now + RESPAWN_INVULN * 1000,
         shieldActiveUntil: 0,
         shieldHitsLeft: SHIELD_HITS_PER_SHIP, // Reset shield on new life
       },
       // Keep asteroids on death - player respawns into same wave
       asteroids: state.state.asteroids,
       lasers: [],
-      explosions: [],
+      explosions: [...state.state.explosions, shipBlast],
     }
     
     // Play ship explosion sound
@@ -207,9 +217,7 @@ export const useGameStore = create<GameStore>((set) => ({
     }
 
     // Play laser sound
-    import('../audio/audioManager').then(({ audioManager }) => {
-      audioManager.playLaser()
-    })
+    audioManager.playLaser()
     
     return {
       state: {
@@ -256,21 +264,12 @@ export const useGameStore = create<GameStore>((set) => ({
     state: { ...state.state, explosions }
   })),
   
-  spawnExplosion: (position) => set((state) => {
-    const newExplosion = {
-      id: `explosion-${Date.now()}`,
-      position,
-      particles: [],
-      createdAt: Date.now(),
+  spawnExplosion: (position) => set((state) => ({
+    state: {
+      ...state.state,
+      explosions: [...state.state.explosions, buildExplosion(position)],
     }
-    
-    return {
-      state: {
-        ...state.state,
-        explosions: [...state.state.explosions, newExplosion],
-      }
-    }
-  }),
+  })),
   
   removeAsteroidAndSplit: (id) => set((state) => {
     const { remaining, spawned } = destroyAsteroid(state.state.asteroids, id)

@@ -2,7 +2,7 @@
 
 import { Ship } from './types'
 import { inputManager } from './input'
-import { HYPERSPACE_COOLDOWN } from './constants'
+import { HYPERSPACE_COOLDOWN, PLAY_SPACE_SIZE } from './constants'
 import { randomRange } from './math'
 
 /**
@@ -30,11 +30,11 @@ export function tryHyperspace(ship: Ship, now: number): { ship: Ship; died: bool
   // 99% chance: successful hyperspace
   const newShip: Ship = {
     ...ship,
-    // Random position within play volume (avoid edges)
+    // Random position within the play volume (kept a little off the edges)
     position: {
-      x: randomRange(-180, 180),
-      y: randomRange(-180, 180),
-      z: randomRange(-180, 180),
+      x: randomRange(-PLAY_SPACE_SIZE * 0.45, PLAY_SPACE_SIZE * 0.45),
+      y: randomRange(-PLAY_SPACE_SIZE * 0.45, PLAY_SPACE_SIZE * 0.45),
+      z: randomRange(-PLAY_SPACE_SIZE * 0.45, PLAY_SPACE_SIZE * 0.45),
     },
     // Clear velocity and any residual spin
     velocity: { x: 0, y: 0, z: 0 },

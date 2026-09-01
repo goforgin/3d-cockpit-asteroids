@@ -2,6 +2,9 @@ import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { displaceGeometry, getAsteroidColor } from '../../game/procedural'
+import { useGameStore } from '../../store/gameStore'
+import { wrapDelta } from '../../game/math'
+import { PLAY_SPACE_SIZE } from '../../game/constants'
 
 interface AsteroidProps {
   position: { x: number; y: number; z: number }
@@ -20,13 +23,22 @@ export const Asteroid = ({
 }: AsteroidProps) => {
   const asteroidRef = useRef<THREE.Group>(null!)
   
-  useFrame((state) => {
-    if (asteroidRef.current) {
-      const delta = state.clock.getDelta()
-      asteroidRef.current.rotation.x += rotationSpeed.x * delta
-      asteroidRef.current.rotation.y += rotationSpeed.y * delta
-      asteroidRef.current.rotation.z += rotationSpeed.z * delta
-    }
+  useFrame((_, delta) => {
+    const g = asteroidRef.current
+    if (!g) return
+
+    g.rotation.x += rotationSpeed.x * delta
+    g.rotation.y += rotationSpeed.y * delta
+    g.rotation.z += rotationSpeed.z * delta
+
+    // Draw the rock at its shortest-wrap position relative to the ship, so the
+    // toroidal play field looks seamless (rocks always surround the cockpit).
+    const ship = useGameStore.getState().state.ship.position
+    g.position.set(
+      ship.x + wrapDelta(position.x - ship.x, PLAY_SPACE_SIZE),
+      ship.y + wrapDelta(position.y - ship.y, PLAY_SPACE_SIZE),
+      ship.z + wrapDelta(position.z - ship.z, PLAY_SPACE_SIZE)
+    )
   })
   
   // Generate geometry with vertex displacement based on asteroid ID

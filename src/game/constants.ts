@@ -25,8 +25,15 @@ export const HYPERSPACE_COOLDOWN = 5.0            // seconds
 export const RESPAWN_INVULN = 3.0                 // seconds
 
 // Play space
-export const PLAY_SPACE_SIZE = 400                // 400x400x400 units
-export const SHIP_RADIUS = 2.0                    // collision radius
+// Compact toroidal cube: rocks are always close and constantly wrap through the
+// zone, so you must keep dodging. Fly off one edge and you reappear on the
+// opposite side (radar included).
+export const PLAY_SPACE_SIZE = 150                // 150x150x150 units
+export const SHIP_RADIUS = 3.0                    // collision radius
+
+// Asteroid drift speed (units/s). Spawned rocks head roughly toward the ship.
+export const ASTEROID_MIN_SPEED = 14
+export const ASTEROID_MAX_SPEED = 26
 
 // Asteroid properties
 export const ASTEROID_LARGE_RADIUS = 8
