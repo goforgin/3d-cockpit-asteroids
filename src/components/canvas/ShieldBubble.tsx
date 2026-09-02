@@ -60,7 +60,7 @@ export const ShieldBubble = () => {
   })
 
   return (
-    <mesh ref={meshRef} visible={false}>
+    <mesh ref={meshRef} name="shield-bubble" visible={false}>
       <sphereGeometry args={[4, 32, 32]} />
       <shaderMaterial
         ref={matRef}

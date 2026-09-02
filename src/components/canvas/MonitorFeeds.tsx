@@ -66,46 +66,57 @@ export const MonitorFeeds = () => {
     const cockpit = scene.getObjectByName('cockpit')
     const lock = scene.getObjectByName('lock-reticle')
     const stars = scene.getObjectByName('starfield')
-    if (cockpit) cockpit.visible = false
-    if (lock) lock.visible = false
-    if (stars) stars.visible = false
+    const shield = scene.getObjectByName('shield-bubble')
 
     const prevTarget = gl.getRenderTarget()
     const prevAutoClear = gl.autoClear
-    gl.autoClear = true
 
-    for (const id of IDS) {
-      const feed = feeds[id]
-      feed.camera.position.set(ship.position.x, ship.position.y, ship.position.z)
-      feed.camera.rotation.set(ship.rotation.pitch, ship.rotation.yaw + OFFSETS[id], 0, 'YXZ')
+    // Always restore GL + visibility. The shield uses AdditiveBlending; if we
+    // leave that blend mode on after gl.render(), the main view (and
+    // EffectComposer) composite additively and the screen goes white. That can
+    // also hang the GPU so a normal refresh looks like it "does nothing".
+    try {
+      if (cockpit) cockpit.visible = false
+      if (lock) lock.visible = false
+      if (stars) stars.visible = false
+      if (shield) shield.visible = false
 
-      gl.setRenderTarget(feed.rt)
-      gl.setClearColor(0x000000, 1)
-      gl.clear()
-      gl.render(scene, feed.camera)
+      gl.autoClear = true
 
-      const canvas = getMonitorCanvas(id)
-      const ctx = canvas?.getContext('2d')
-      if (ctx) {
-        gl.readRenderTargetPixels(feed.rt, 0, 0, W, H, feed.buf)
-        for (let y = 0; y < H; y++) {
-          const src = (H - 1 - y) * W * 4
-          feed.img.data.set(feed.buf.subarray(src, src + W * 4), y * W * 4)
+      for (const id of IDS) {
+        const feed = feeds[id]
+        feed.camera.position.set(ship.position.x, ship.position.y, ship.position.z)
+        feed.camera.rotation.set(ship.rotation.pitch, ship.rotation.yaw + OFFSETS[id], 0, 'YXZ')
+
+        gl.setRenderTarget(feed.rt)
+        gl.setClearColor(0x000000, 1)
+        gl.clear()
+        gl.render(scene, feed.camera)
+
+        const canvas = getMonitorCanvas(id)
+        const ctx = canvas?.getContext('2d')
+        if (ctx) {
+          gl.readRenderTargetPixels(feed.rt, 0, 0, W, H, feed.buf)
+          for (let y = 0; y < H; y++) {
+            const src = (H - 1 - y) * W * 4
+            feed.img.data.set(feed.buf.subarray(src, src + W * 4), y * W * 4)
+          }
+          ctx.putImageData(feed.img, 0, 0)
         }
-        ctx.putImageData(feed.img, 0, 0)
       }
+    } finally {
+      gl.setRenderTarget(prevTarget)
+      gl.autoClear = prevAutoClear
+      gl.setClearColor(0x000000, 1)
+      gl.setViewport(0, 0, gl.domElement.width, gl.domElement.height)
+      gl.setScissorTest(false)
+      gl.resetState()
+
+      if (cockpit) cockpit.visible = true
+      if (lock) lock.visible = true
+      if (stars) stars.visible = true
+      // Shield visibility is owned by ShieldBubble's useFrame; don't force it on.
     }
-
-    gl.setRenderTarget(prevTarget)
-    const canvas = gl.domElement
-    gl.setViewport(0, 0, canvas.width, canvas.height)
-    gl.setScissorTest(false)
-    gl.autoClear = prevAutoClear
-    gl.setClearColor(0x000000, 1)
-
-    if (cockpit) cockpit.visible = true
-    if (lock) lock.visible = true
-    if (stars) stars.visible = true
   }, -1)
 
   return null
