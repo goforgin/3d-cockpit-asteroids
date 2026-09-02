@@ -13,6 +13,7 @@ import { LockReticle } from './LockReticle'
 import { Planets } from './Planets'
 import { EnemyField } from './EnemyField'
 import { EnemyBulletField } from './EnemyBulletField'
+import { MonitorFeeds } from './MonitorFeeds'
 
 export const Scene = () => {
   const starRef = useRef<THREE.Points>(null!)
@@ -55,6 +56,8 @@ export const Scene = () => {
       <ThrustParticles />
       <LockReticle />
       <Effects />
+      {/* Live camera feeds for dashboard monitors */}
+      <MonitorFeeds />
     </>
   )
 }

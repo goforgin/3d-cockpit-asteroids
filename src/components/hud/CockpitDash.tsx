@@ -1,7 +1,8 @@
 import { Radar } from './Radar'
 import { useGameStore } from '../../store/gameStore'
 import { SHIELD_HITS_PER_SHIP } from '../../game/constants'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { registerMonitor, unregisterMonitor } from '../../game/monitorRegistry'
 
 // Fixed constants
 const RADAR_SIZE = 180
@@ -13,36 +14,68 @@ const DASH_HEIGHT = BOTTOM_INSET + RADAR_SIZE + DASH_PAD
 const MONITOR_WIDTH = 140
 const MONITOR_HEIGHT = 90
 
-// Camera monitor component - static bezel only (no live video)
-const CameraMonitor = ({ label }: { label: string }) => (
-  <div className="flex flex-col items-center space-y-1">
-    {/* Monitor bezel - dark CRT frame */}
-    <div
-      className="relative rounded-sm border border-cyan-700/50 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] overflow-hidden"
-      style={{
-        width: MONITOR_WIDTH,
-        height: MONITOR_HEIGHT,
-        backgroundColor: '#0a0a0a',
-      }}
-    >
-      {/* CRT scanline overlay */}
+// Map labels to monitor IDs
+const labelToId = (label: string): 'left' | 'front' | 'back' | 'right' => {
+  switch (label) {
+    case 'LEFT': return 'left'
+    case 'FRONT': return 'front'
+    case 'BACK': return 'back'
+    case 'RIGHT': return 'right'
+    default: return 'front'
+  }
+}
+
+// Camera monitor component - bezel with canvas for live video
+const CameraMonitor = ({ label }: { label: string }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const monitorId = labelToId(label)
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      registerMonitor(monitorId, canvasRef.current)
+    }
+    return () => {
+      unregisterMonitor(monitorId)
+    }
+  }, [monitorId])
+
+  return (
+    <div className="flex flex-col items-center space-y-1">
+      {/* Monitor bezel - dark CRT frame */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="relative rounded-sm border border-cyan-700/50 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] overflow-hidden"
         style={{
-          backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0%, transparent 50%, rgba(0,255,136,0.05) 50%, rgba(0,255,136,0.05) 52%)',
-          backgroundSize: '100% 4px',
+          width: MONITOR_WIDTH,
+          height: MONITOR_HEIGHT,
+          backgroundColor: '#0a0a0a',
         }}
-      />
+      >
+        {/* Video canvas - fills bezel */}
+        <canvas
+          ref={canvasRef}
+          width={MONITOR_WIDTH}
+          height={MONITOR_HEIGHT}
+          className="w-full h-full block"
+        />
+        {/* CRT scanline overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0%, transparent 50%, rgba(0,255,136,0.05) 50%, rgba(0,255,136,0.05) 52%)',
+            backgroundSize: '100% 4px',
+          }}
+        />
+      </div>
+      {/* Label */}
+      <div
+        className="text-[10px] tracking-widest text-cyan-400/80"
+        style={{ fontFamily: "'Orbitron', monospace" }}
+      >
+        {label}
+      </div>
     </div>
-    {/* Label */}
-    <div
-      className="text-[10px] tracking-widest text-cyan-400/80"
-      style={{ fontFamily: "'Orbitron', monospace" }}
-    >
-      {label}
-    </div>
-  </div>
-)
+  )
+}
 
 // Shield pips component (inline for right cluster)
 const ShieldPips = () => {

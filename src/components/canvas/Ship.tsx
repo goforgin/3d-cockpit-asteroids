@@ -46,7 +46,7 @@ export const Ship = () => {
   )
 
   return (
-    <group ref={cockpitRef}>
+    <group ref={cockpitRef} name="cockpit">
       <group rotation={[0, Math.PI, 0]}>
         {/* Dim fill only — bright lights here bloomed into a white flare on the dash */}
         <pointLight position={[0, 0.15, 0.15]} intensity={0.35} distance={2.5} color="#9bb4d0" />
