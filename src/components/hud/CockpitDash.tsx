@@ -1,9 +1,7 @@
 import { Radar } from './Radar'
 import { useGameStore } from '../../store/gameStore'
 import { SHIELD_HITS_PER_SHIP } from '../../game/constants'
-import { useEffect, useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
-import * as THREE from 'three'
+import { useEffect, useState } from 'react'
 
 // Fixed constants
 const RADAR_SIZE = 180
@@ -15,120 +13,36 @@ const DASH_HEIGHT = BOTTOM_INSET + RADAR_SIZE + DASH_PAD
 const MONITOR_WIDTH = 140
 const MONITOR_HEIGHT = 90
 
-// Camera monitor component - renders 4 views of the world
-const CameraMonitor = ({
-  label,
-  yawOffset,
-  worldScene,
-  shipPosition,
-  shipYaw,
-  shipPitch,
-}: {
-  label: string
-  yawOffset: number
-  worldScene: THREE.Scene
-  shipPosition: { x: number; y: number; z: number }
-  shipYaw: number
-  shipPitch: number
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const rtRef = useRef<THREE.WebGLRenderTarget | null>(null)
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
-  const tempEuler = useRef(new THREE.Euler())
-
-  // Create camera and render target once
-  useEffect(() => {
-    const camera = new THREE.PerspectiveCamera(65, MONITOR_WIDTH / MONITOR_HEIGHT, 0.5, 5000)
-    camera.rotation.order = 'YXZ'
-    cameraRef.current = camera
-
-    const rt = new THREE.WebGLRenderTarget(MONITOR_WIDTH, MONITOR_HEIGHT)
-    rtRef.current = rt
-
-    return () => {
-      rt.dispose()
-    }
-  }, [])
-
-  // Render each frame
-  useFrame((state) => {
-    if (!rtRef.current || !cameraRef.current || !canvasRef.current) return
-
-    const camera = cameraRef.current
-    const rt = rtRef.current
-
-    // Set camera position and rotation
-    camera.position.set(shipPosition.x, shipPosition.y, shipPosition.z)
-    tempEuler.current.set(shipPitch, shipYaw + yawOffset, 0, 'YXZ')
-    camera.quaternion.setFromEuler(tempEuler.current)
-
-    // Render world scene to render target
-    state.gl.setRenderTarget(rt)
-    state.gl.render(worldScene, camera)
-    state.gl.setRenderTarget(null)
-
-    // Blit to canvas
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    if (ctx) {
-      // Get the rendered texture
-      const texture = rt.texture
-      if (texture) {
-        // Create a temporary canvas to flip Y (Three.js renders upside down)
-        const tempCanvas = document.createElement('canvas')
-        tempCanvas.width = MONITOR_WIDTH
-        tempCanvas.height = MONITOR_HEIGHT
-        const tempCtx = tempCanvas.getContext('2d')
-        if (tempCtx && texture.image) {
-          tempCtx.drawImage(texture.image as HTMLImageElement, 0, 0)
-          // Flip vertically and draw to main canvas
-          ctx.save()
-          ctx.translate(0, MONITOR_HEIGHT)
-          ctx.scale(1, -1)
-          ctx.drawImage(tempCanvas, 0, 0)
-          ctx.restore()
-        }
-      }
-    }
-  })
-
-  return (
-    <div className="flex flex-col items-center space-y-1">
-      {/* Monitor bezel */}
+// Camera monitor component - static bezel only (no live video)
+const CameraMonitor = ({ label }: { label: string }) => (
+  <div className="flex flex-col items-center space-y-1">
+    {/* Monitor bezel - dark CRT frame */}
+    <div
+      className="relative rounded-sm border border-cyan-700/50 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] overflow-hidden"
+      style={{
+        width: MONITOR_WIDTH,
+        height: MONITOR_HEIGHT,
+        backgroundColor: '#0a0a0a',
+      }}
+    >
+      {/* CRT scanline overlay */}
       <div
-        className="relative rounded-sm border border-cyan-700/50 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] overflow-hidden"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          width: MONITOR_WIDTH,
-          height: MONITOR_HEIGHT,
-          backgroundColor: '#0a0a0a',
+          backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0%, transparent 50%, rgba(0,255,136,0.05) 50%, rgba(0,255,136,0.05) 52%)',
+          backgroundSize: '100% 4px',
         }}
-      >
-        {/* Video canvas */}
-        <canvas
-          ref={canvasRef}
-          width={MONITOR_WIDTH}
-          height={MONITOR_HEIGHT}
-          className="w-full h-full"
-        />
-        {/* CRT scanline overlay */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0%, transparent 50%, rgba(0,255,136,0.05) 50%, rgba(0,255,136,0.05) 52%)',
-            backgroundSize: '100% 4px',
-          }}
-        />
-      </div>
-      {/* Label */}
-      <div
-        className="text-[10px] tracking-widest text-cyan-400/80"
-        style={{ fontFamily: "'Orbitron', monospace" }}
-      >
-        {label}
-      </div>
+      />
     </div>
-  )
-}
+    {/* Label */}
+    <div
+      className="text-[10px] tracking-widest text-cyan-400/80"
+      style={{ fontFamily: "'Orbitron', monospace" }}
+    >
+      {label}
+    </div>
+  </div>
+)
 
 // Shield pips component (inline for right cluster)
 const ShieldPips = () => {
@@ -365,97 +279,8 @@ const RightControls = () => (
 
 export const CockpitDash = () => {
   const gameState = useGameStore((state) => state.state.gameState)
-  const ship = useGameStore((state) => state.state.ship)
-  const { asteroids, enemies } = useGameStore((state) => ({
-    asteroids: state.state.asteroids,
-    enemies: state.state.enemies,
-  }))
 
-  // Create world scene (without cockpit, HUD, postprocessing)
-  const worldSceneRef = useRef<THREE.Scene | null>(null)
-  const starsRef = useRef<THREE.Points | null>(null)
-  const asteroidMeshesRef = useRef<THREE.Mesh[]>([])
-  const enemyMeshesRef = useRef<THREE.Mesh[]>([])
-  const sceneBuiltRef = useRef(false)
-  
-  // Build world scene once when game starts
-  useEffect(() => {
-    if (gameState !== 'playing' || sceneBuiltRef.current) return
-    
-    const scene = new THREE.Scene()
-    
-    // Stars
-    const starsGeometry = new THREE.BufferGeometry()
-    const starsPositions = new Float32Array(10000 * 3)
-    for (let i = 0; i < 10000; i++) {
-      const r = 200 + Math.random() * 200
-      const theta = Math.random() * Math.PI * 2
-      const phi = Math.random() * Math.PI
-      starsPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
-      starsPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
-      starsPositions[i * 3 + 2] = r * Math.cos(phi)
-    }
-    starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3))
-    const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: true })
-    const stars = new THREE.Points(starsGeometry, starsMaterial)
-    scene.add(stars)
-    starsRef.current = stars
-    
-    // Asteroids - use random colors based on type
-    const asteroidMeshes: THREE.Mesh[] = []
-    asteroids.forEach((asteroid) => {
-      const geometry = new THREE.IcosahedronGeometry(asteroid.radius, 0)
-      const color = asteroid.type === 'large' ? 0x888888 : asteroid.type === 'medium' ? 0x666666 : 0x555555
-      const material = new THREE.MeshStandardMaterial({
-        color: color,
-        roughness: 0.9,
-        metalness: 0.2,
-      })
-      const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.set(asteroid.position.x, asteroid.position.y, asteroid.position.z)
-      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0)
-      scene.add(mesh)
-      asteroidMeshes.push(mesh)
-    })
-    asteroidMeshesRef.current = asteroidMeshes
-    
-    // Enemies (saucers)
-    const enemyMeshes: THREE.Mesh[] = []
-    enemies.forEach((enemy) => {
-      const geometry = new THREE.ConeGeometry(enemy.radius, enemy.radius * 1.5, 8)
-      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
-      const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.set(enemy.position.x, enemy.position.y, enemy.position.z)
-      mesh.rotation.z = Math.PI / 2
-      scene.add(mesh)
-      enemyMeshes.push(mesh)
-    })
-    enemyMeshesRef.current = enemyMeshes
-    
-    worldSceneRef.current = scene
-    sceneBuiltRef.current = true
-  }, [gameState])
-  
-  // Update mesh positions each frame
-  useFrame(() => {
-    if (!sceneBuiltRef.current || !worldSceneRef.current) return
-    
-    // Update asteroid positions
-    asteroidMeshesRef.current.forEach((mesh, i) => {
-      if (asteroids[i]) {
-        mesh.position.set(asteroids[i].position.x, asteroids[i].position.y, asteroids[i].position.z)
-      }
-    })
-    
-    // Update enemy positions
-    enemyMeshesRef.current.forEach((mesh, i) => {
-      if (enemies[i]) {
-        mesh.position.set(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z)
-      }
-    })
-  })
-
-  if (gameState !== 'playing' || !worldSceneRef.current) {
+  if (gameState !== 'playing') {
     return (
       <div
         className="pointer-events-none"
@@ -506,24 +331,10 @@ export const CockpitDash = () => {
         }}
       >
         {/* Left camera monitor */}
-        <CameraMonitor
-          label="LEFT"
-          yawOffset={-Math.PI / 2}
-          worldScene={worldSceneRef.current}
-          shipPosition={ship.position}
-          shipYaw={ship.rotation.yaw}
-          shipPitch={ship.rotation.pitch}
-        />
+        <CameraMonitor label="LEFT" />
         
         {/* Front camera monitor */}
-        <CameraMonitor
-          label="FRONT"
-          yawOffset={0}
-          worldScene={worldSceneRef.current}
-          shipPosition={ship.position}
-          shipYaw={ship.rotation.yaw}
-          shipPitch={ship.rotation.pitch}
-        />
+        <CameraMonitor label="FRONT" />
         
         {/* Left controls (COMM) */}
         <div className="flex items-center">
@@ -541,24 +352,10 @@ export const CockpitDash = () => {
         </div>
         
         {/* Back camera monitor */}
-        <CameraMonitor
-          label="BACK"
-          yawOffset={Math.PI}
-          worldScene={worldSceneRef.current}
-          shipPosition={ship.position}
-          shipYaw={ship.rotation.yaw}
-          shipPitch={ship.rotation.pitch}
-        />
+        <CameraMonitor label="BACK" />
         
         {/* Right camera monitor */}
-        <CameraMonitor
-          label="RIGHT"
-          yawOffset={Math.PI / 2}
-          worldScene={worldSceneRef.current}
-          shipPosition={ship.position}
-          shipYaw={ship.rotation.yaw}
-          shipPitch={ship.rotation.pitch}
-        />
+        <CameraMonitor label="RIGHT" />
       </div>
     </div>
   )
