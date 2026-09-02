@@ -44,7 +44,7 @@ export const LockReticle = () => {
   }
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} name="lock-reticle">
       <Html center zIndexRange={[40, 0]} style={{ pointerEvents: 'none' }}>
         <div style={{ position: 'relative', width: 44, height: 44 }}>
           {/* Corner brackets */}

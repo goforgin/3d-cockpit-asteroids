@@ -1,146 +1,109 @@
-// MonitorFeeds.tsx - Renders live camera feeds to dashboard monitors
-// This component is INSIDE the Canvas, so it can use useFrame and WebGL APIs
-
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import * as THREE from 'three'
 import { useGameStore } from '../../store/gameStore'
 import { getMonitorCanvas, MONITOR_SIZE, type MonitorId } from '../../game/monitorRegistry'
-import * as THREE from 'three'
 
-// Monitor dimensions
-const MONITOR_W = MONITOR_SIZE.w
-const MONITOR_H = MONITOR_SIZE.h
+const W = MONITOR_SIZE.w
+const H = MONITOR_SIZE.h
 
-// Camera offsets for each monitor
-const MONITOR_OFFSETS: Record<string, number> = {
+const OFFSETS: Record<MonitorId, number> = {
   left: -Math.PI / 2,
   front: 0,
   back: Math.PI,
   right: Math.PI / 2,
 }
 
-// Camera and render target storage
-interface MonitorData {
+const IDS: MonitorId[] = ['left', 'front', 'back', 'right']
+
+interface Feed {
   camera: THREE.PerspectiveCamera
   rt: THREE.WebGLRenderTarget
   buf: Uint8Array
-  imgData: ImageData
+  img: ImageData
 }
 
-let monitorData: Record<string, MonitorData> | null = null
+// Live aux cameras. MUST be a real function component so useFrame/useEffect
+// run inside <Canvas>. The previous version called those hooks at module
+// scope, which crashes React into a blank white page.
+export const MonitorFeeds = () => {
+  const feedsRef = useRef<Record<MonitorId, Feed> | null>(null)
 
-// Initialize monitor data once
-const initMonitorData = (): Record<string, MonitorData> => {
-  if (monitorData) return monitorData
-
-  const fov = 65
-  const near = 0.5
-  const far = 5000
-
-  monitorData = {
-    left: createMonitorData('left', fov, near, far),
-    front: createMonitorData('front', fov, near, far),
-    back: createMonitorData('back', fov, near, far),
-    right: createMonitorData('right', fov, near, far),
-  }
-
-  return monitorData
-}
-
-const createMonitorData = (_id: MonitorId, fov: number, near: number, far: number): MonitorData => {
-  const camera = new THREE.PerspectiveCamera(fov, MONITOR_W / MONITOR_H, near, far)
-  camera.rotation.order = 'YXZ'
-
-  const rt = new THREE.WebGLRenderTarget(MONITOR_W, MONITOR_H)
-  rt.texture.colorSpace = THREE.SRGBColorSpace
-
-  const buf = new Uint8Array(MONITOR_W * MONITOR_H * 4)
-  const imgData = new ImageData(MONITOR_W, MONITOR_H)
-
-  return { camera, rt, buf, imgData }
-}
-
-// Cleanup on unmount
-useEffect(() => {
-  return () => {
-    if (monitorData) {
-      Object.values(monitorData).forEach((m) => m.rt.dispose())
-      monitorData = null
-    }
-  }
-}, [])
-
-// Main render loop
-useFrame((state) => {
-  const { gl, scene } = state
-  const gameState = useGameStore.getState().state.gameState
-
-  // Only render when playing
-  if (gameState !== 'playing') return
-
-  // Initialize monitor data if needed
-  const data = initMonitorData()
-
-  // Get ship position and rotation
-  const ship = useGameStore.getState().state.ship
-  const shipPos = ship.position
-  const shipYaw = ship.rotation.yaw
-  const shipPitch = ship.rotation.pitch
-
-  // Hide cockpit so monitors don't show interior
-  const cockpit = scene.getObjectByName('cockpit')
-  if (cockpit) {
-    ;(cockpit as THREE.Group).visible = false
-  }
-
-  // Save previous render target
-  const prev = gl.getRenderTarget()
-
-  // Render each monitor
-  Object.entries(data).forEach(([id, monitor]) => {
-    const { camera, rt, buf, imgData } = monitor
-
-    // Set camera position and rotation
-    camera.position.set(shipPos.x, shipPos.y, shipPos.z)
-    const yawOffset = MONITOR_OFFSETS[id]
-    camera.rotation.set(shipPitch, shipYaw + yawOffset, 0, 'YXZ')
-
-    // Render to render target
-    gl.setRenderTarget(rt)
-    gl.setClearColor(0x000000, 1)
-    gl.clear()
-
-    // Render scene (without cockpit)
-    gl.render(scene, camera)
-
-    // Blit to HUD canvas
-    const canvas = getMonitorCanvas(id as MonitorId)
-    if (canvas) {
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        // Read pixels from render target
-        gl.readRenderTargetPixels(rt, 0, 0, MONITOR_W, MONITOR_H, buf)
-
-        // Flip Y (WebGL origin is bottom-left, canvas is top-left)
-        for (let y = 0; y < MONITOR_H; y++) {
-          const src = (MONITOR_H - 1 - y) * MONITOR_W * 4
-          const dst = y * MONITOR_W * 4
-          imgData.data.set(buf.subarray(src, src + MONITOR_W * 4), dst)
-        }
-
-        ctx.putImageData(imgData, 0, 0)
+  useEffect(() => {
+    const make = (): Feed => {
+      const camera = new THREE.PerspectiveCamera(65, W / H, 0.5, 5000)
+      camera.rotation.order = 'YXZ'
+      const rt = new THREE.WebGLRenderTarget(W, H)
+      rt.texture.colorSpace = THREE.SRGBColorSpace
+      return {
+        camera,
+        rt,
+        buf: new Uint8Array(W * H * 4),
+        img: new ImageData(W, H),
       }
     }
-  })
+    feedsRef.current = {
+      left: make(),
+      front: make(),
+      back: make(),
+      right: make(),
+    }
+    return () => {
+      if (!feedsRef.current) return
+      for (const f of Object.values(feedsRef.current)) f.rt.dispose()
+      feedsRef.current = null
+    }
+  }, [])
 
-  // Restore previous render target
-  gl.setRenderTarget(prev)
+  useFrame((state) => {
+    const feeds = feedsRef.current
+    if (!feeds) return
+    if (useGameStore.getState().state.gameState !== 'playing') return
 
-  // Show cockpit again
-  if (cockpit) {
-    ;(cockpit as THREE.Group).visible = true
-  }
-}, -1) // Priority -1: runs before R3F's main render
+    const { gl, scene } = state
+    const ship = useGameStore.getState().state.ship
 
-// Export empty component - all logic is in hooks
-export const MonitorFeeds = () => null
+    const cockpit = scene.getObjectByName('cockpit')
+    const lock = scene.getObjectByName('lock-reticle')
+    if (cockpit) cockpit.visible = false
+    if (lock) lock.visible = false
+
+    const prevTarget = gl.getRenderTarget()
+    const prevAutoClear = gl.autoClear
+    gl.autoClear = true
+
+    for (const id of IDS) {
+      const feed = feeds[id]
+      feed.camera.position.set(ship.position.x, ship.position.y, ship.position.z)
+      feed.camera.rotation.set(ship.rotation.pitch, ship.rotation.yaw + OFFSETS[id], 0, 'YXZ')
+
+      gl.setRenderTarget(feed.rt)
+      gl.setClearColor(0x000000, 1)
+      gl.clear()
+      gl.render(scene, feed.camera)
+
+      const canvas = getMonitorCanvas(id)
+      const ctx = canvas?.getContext('2d')
+      if (ctx) {
+        gl.readRenderTargetPixels(feed.rt, 0, 0, W, H, feed.buf)
+        for (let y = 0; y < H; y++) {
+          const src = (H - 1 - y) * W * 4
+          feed.img.data.set(feed.buf.subarray(src, src + W * 4), y * W * 4)
+        }
+        ctx.putImageData(feed.img, 0, 0)
+      }
+    }
+
+    gl.setRenderTarget(prevTarget)
+    const canvas = gl.domElement
+    gl.setViewport(0, 0, canvas.width, canvas.height)
+    gl.setScissorTest(false)
+    gl.autoClear = prevAutoClear
+    gl.setClearColor(0x000000, 1)
+
+    if (cockpit) cockpit.visible = true
+    if (lock) lock.visible = true
+  }, -1)
+
+  return null
+}
