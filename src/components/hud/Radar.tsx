@@ -159,19 +159,20 @@ export const Radar = () => {
           )
         })}
 
-        {/* Enemy saucer blips (red, pulsing) */}
+        {/* Enemy saucer blips — red diamonds (distinct from round rock blips) */}
         {enemyBlips.map((blip) => {
-          const size = (BLIP_SIZES[blip.size] ?? 4) + 2
+          const size = (BLIP_SIZES[blip.size] ?? 4) + 3
           return (
             <div
               key={`enemy-${blip.id}`}
-              className="absolute z-20 rounded-full bg-red-500 animate-pulse shadow-[0_0_6px_#ff2222]"
+              className="absolute z-20 bg-red-500 animate-pulse shadow-[0_0_7px_#ff2222]"
               style={{
                 left: blip.x * RADAR_SIZE,
                 top: blip.y * RADAR_SIZE,
                 width: size,
                 height: size,
-                transform: 'translate(-50%, -50%)',
+                // Rotate a square into a diamond to differentiate from rocks.
+                transform: 'translate(-50%, -50%) rotate(45deg)',
               }}
             />
           )

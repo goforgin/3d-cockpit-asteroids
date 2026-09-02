@@ -7,7 +7,7 @@ import { updateShipPhysics } from '../game/shipPhysics'
 import { tryActivateShield, isShieldActive, handleShieldHit } from '../game/shieldSystem'
 import { tryHyperspace } from '../game/hyperspaceSystem'
 import { audioManager } from '../audio/audioManager'
-import { getLockedAsteroidId } from '../game/targeting'
+import { getLockedTargetId, Targetable } from '../game/targeting'
 import { updateEnemies, updateEnemyBullets, spawnSaucer, getSaucerDifficulty } from '../game/enemies'
 import { wrappedDistance } from '../game/math'
 import {
@@ -93,8 +93,8 @@ export const useGameSimulation = () => {
       useGameStore.getState().setEnemies([...spawnState.enemies, saucer])
       const gap =
         type === 'large'
-          ? 10000
-          : Math.max(4000, 9000 - (waveElapsed - SAUCER_SMALL_DELAY) * 120)
+          ? 14000
+          : Math.max(8000, 16000 - (waveElapsed - SAUCER_SMALL_DELAY) * 100)
       useGameStore.getState().scheduleNextSaucer(now + gap)
       audioManager.playSaucerSpawn()
     }
@@ -109,13 +109,19 @@ export const useGameSimulation = () => {
       inputManager.isKeyHeld('arrowright') ||
       inputManager.isKeyHeld('arrowup') ||
       inputManager.isKeyHeld('arrowdown')
+
+    // Rocks and saucers are both lockable.
+    const targets: Targetable[] = [
+      ...aimState.asteroids.map((a) => ({ id: a.id, position: a.position, radius: a.radius })),
+      ...aimState.enemies.map((e) => ({ id: e.id, position: e.position, radius: e.radius })),
+    ]
     const currentLock = aimState.lockedAsteroidId
     const lockValid =
-      currentLock !== null && aimState.asteroids.some((a) => a.id === currentLock)
+      currentLock !== null && targets.some((t) => t.id === currentLock)
 
     let nextLock: string | null
     if (arrowHeld || !lockValid) {
-      nextLock = getLockedAsteroidId(aimState.ship, aimState.asteroids)
+      nextLock = getLockedTargetId(aimState.ship, targets)
     } else {
       nextLock = currentLock
     }
@@ -130,13 +136,24 @@ export const useGameSimulation = () => {
       // Fire the visual bolt + sound + rate limit
       useGameStore.getState().tryFireLaser()
 
-      // Locked on: firing instantly destroys the targeted rock.
+      // Locked on: firing instantly destroys the target (rock or saucer).
       if (willFire && preFire.lockedAsteroidId) {
-        const target = preFire.asteroids.find((a) => a.id === preFire.lockedAsteroidId)
-        if (target) {
-          useGameStore.getState().spawnExplosion(target.position)
-          useGameStore.getState().addScore(scoreForType(target.type))
-          useGameStore.getState().removeAsteroidAndSplit(target.id)
+        const lockId = preFire.lockedAsteroidId
+        const rock = preFire.asteroids.find((a) => a.id === lockId)
+        const saucer = preFire.enemies.find((e) => e.id === lockId)
+        if (rock) {
+          useGameStore.getState().spawnExplosion(rock.position)
+          useGameStore.getState().addScore(scoreForType(rock.type))
+          useGameStore.getState().removeAsteroidAndSplit(rock.id)
+          audioManager.playExplosion()
+        } else if (saucer) {
+          useGameStore.getState().spawnExplosion(saucer.position)
+          useGameStore.getState().addScore(
+            saucer.type === 'large' ? SCORE_SAUCER_LARGE : SCORE_SAUCER_SMALL
+          )
+          useGameStore.getState().setEnemies(
+            useGameStore.getState().state.enemies.filter((e) => e.id !== saucer.id)
+          )
           audioManager.playExplosion()
         }
       }

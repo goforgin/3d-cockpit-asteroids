@@ -1,9 +1,49 @@
-// Lock-on targeting: find the asteroid currently under the crosshair.
+// Lock-on targeting: find the target currently under the crosshair.
 
-import { Ship, Asteroid } from './types'
+import { Ship, Asteroid, Vector3 } from './types'
 import { getForwardVector } from './shipPhysics'
 import { wrapDelta } from './math'
 import { PLAY_SPACE_SIZE } from './constants'
+
+export interface Targetable {
+  id: string
+  position: Vector3
+  radius: number
+}
+
+// Generic version: nearest targetable whose center is within its radius (plus
+// aim assist) of the aim ray. Works for rocks and saucers alike.
+export function getLockedTargetId(
+  ship: Ship,
+  targets: Targetable[],
+  aimAssist = 3
+): string | null {
+  const f = getForwardVector(ship.rotation.yaw, ship.rotation.pitch)
+
+  let bestId: string | null = null
+  let bestDistance = Infinity
+
+  for (const target of targets) {
+    const dx = wrapDelta(target.position.x - ship.position.x, PLAY_SPACE_SIZE)
+    const dy = wrapDelta(target.position.y - ship.position.y, PLAY_SPACE_SIZE)
+    const dz = wrapDelta(target.position.z - ship.position.z, PLAY_SPACE_SIZE)
+
+    const t = dx * f.x + dy * f.y + dz * f.z
+    if (t <= 0) continue
+
+    const perpX = dx - f.x * t
+    const perpY = dy - f.y * t
+    const perpZ = dz - f.z * t
+    const perp = Math.sqrt(perpX * perpX + perpY * perpY + perpZ * perpZ)
+
+    if (perp <= target.radius + aimAssist && t < bestDistance) {
+      bestDistance = t
+      bestId = target.id
+    }
+  }
+
+  return bestId
+}
 
 // Casts a ray from the ship along its forward axis (the crosshair direction)
 // and returns the id of the nearest asteroid that ray passes through.

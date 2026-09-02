@@ -15,16 +15,17 @@ export const LockReticle = () => {
 
   useFrame(() => {
     if (!lockedId || !groupRef.current) return
-    const ast = useGameStore
-      .getState()
-      .state.asteroids.find((a) => a.id === lockedId)
-    if (ast) {
-      const ship = useGameStore.getState().state.ship.position
+    const s = useGameStore.getState().state
+    const target =
+      s.asteroids.find((a) => a.id === lockedId) ||
+      s.enemies.find((e) => e.id === lockedId)
+    if (target) {
+      const ship = s.ship.position
       groupRef.current.visible = true
       groupRef.current.position.set(
-        ship.x + wrapDelta(ast.position.x - ship.x, PLAY_SPACE_SIZE),
-        ship.y + wrapDelta(ast.position.y - ship.y, PLAY_SPACE_SIZE),
-        ship.z + wrapDelta(ast.position.z - ship.z, PLAY_SPACE_SIZE)
+        ship.x + wrapDelta(target.position.x - ship.x, PLAY_SPACE_SIZE),
+        ship.y + wrapDelta(target.position.y - ship.y, PLAY_SPACE_SIZE),
+        ship.z + wrapDelta(target.position.z - ship.z, PLAY_SPACE_SIZE)
       )
     } else {
       groupRef.current.visible = false

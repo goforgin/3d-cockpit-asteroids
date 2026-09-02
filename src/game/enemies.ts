@@ -68,8 +68,9 @@ export const spawnSaucer = (
     velocity: { x: heading.x * speed, y: heading.y * speed, z: heading.z * speed },
     radius: type === 'large' ? SAUCER_LARGE_RADIUS : SAUCER_SMALL_RADIUS,
     spawnedAt: now,
-    nextTurnAt: now + (type === 'large' ? 1600 : 700),
-    nextFireAt: now + (type === 'large' ? 1800 : 1200),
+    nextTurnAt: now + (type === 'large' ? 1800 : 1100),
+    // Grace period before the saucer opens fire.
+    nextFireAt: now + (type === 'large' ? 2800 : 2200),
   }
 }
 
@@ -135,9 +136,10 @@ const fireBullet = (
     })
     speed = ENEMY_BULLET_SPEED_LARGE
   } else {
-    // Aimed at the ship, with an error cone that tightens as difficulty rises.
+    // Aimed at the ship, with an error cone that tightens as difficulty rises
+    // (but never becomes pinpoint, so it stays dodgeable).
     const aim = norm(toShipVector(saucer.position, ship))
-    const errorRad = lerp(0.45, 0.04, difficulty) // ~26deg -> ~2deg
+    const errorRad = lerp(0.55, 0.16, difficulty) // ~32deg -> ~9deg
     const jitter = randomOnSphere(Math.tan(errorRad))
     dir = norm({ x: aim.x + jitter.x, y: aim.y + jitter.y, z: aim.z + jitter.z })
     speed = lerp(ENEMY_BULLET_SPEED_SMALL_MIN, ENEMY_BULLET_SPEED_SMALL_MAX, difficulty)
@@ -184,8 +186,8 @@ export const updateEnemies = (
       velocity = chooseVelocity(saucer, ship, difficulty)
       const turnGap =
         saucer.type === 'large'
-          ? randomRange(1200, 2200)
-          : lerp(1000, 380, difficulty) * randomRange(0.8, 1.2)
+          ? randomRange(1600, 2600)
+          : lerp(1300, 650, difficulty) * randomRange(0.8, 1.2)
       nextTurnAt = now + turnGap
     }
 
@@ -195,8 +197,8 @@ export const updateEnemies = (
       fired = true
       const fireGap =
         saucer.type === 'large'
-          ? randomRange(2000, 3200)
-          : lerp(2000, 820, difficulty) * randomRange(0.85, 1.15)
+          ? randomRange(2800, 4000)
+          : lerp(2800, 1400, difficulty) * randomRange(0.85, 1.15)
       nextFireAt = now + fireGap
     }
 

@@ -32,36 +32,36 @@ export const PLAY_SPACE_SIZE = 110                // 110x110x110 units
 export const SHIP_RADIUS = 3.0                    // collision radius
 
 // Asteroid drift speed (units/s). Spawned rocks head roughly toward the ship.
-export const ASTEROID_MIN_SPEED = 16
-export const ASTEROID_MAX_SPEED = 30
+export const ASTEROID_MIN_SPEED = 11
+export const ASTEROID_MAX_SPEED = 20
 
 // --- Enemy saucers (classic Asteroids UFOs) ---
 export const SCORE_SAUCER_LARGE = 200
 export const SCORE_SAUCER_SMALL = 1000
 
-export const SAUCER_LARGE_RADIUS = 5
-export const SAUCER_SMALL_RADIUS = 2.6
+export const SAUCER_LARGE_RADIUS = 5.5
+export const SAUCER_SMALL_RADIUS = 3.0
 
 // The big, easy saucer appears first; if you dawdle the small, aggressive one
 // shows up and everything escalates.
-export const SAUCER_LARGE_DELAY = 6               // seconds into a wave
-export const SAUCER_SMALL_DELAY = 15              // seconds into a wave
-export const MAX_SAUCERS = 2
+export const SAUCER_LARGE_DELAY = 10              // seconds into a wave
+export const SAUCER_SMALL_DELAY = 26              // seconds into a wave
+export const MAX_SAUCERS = 1
 
-// Movement speeds (units/s)
-export const SAUCER_LARGE_SPEED = 20
-export const SAUCER_SMALL_SPEED_MIN = 28
-export const SAUCER_SMALL_SPEED_MAX = 46
+// Movement speeds (units/s). Large is a slow, easy target; small is nimbler.
+export const SAUCER_LARGE_SPEED = 12
+export const SAUCER_SMALL_SPEED_MIN = 20
+export const SAUCER_SMALL_SPEED_MAX = 30
 
 // Enemy bullets
-export const ENEMY_BULLET_SPEED_LARGE = 42
-export const ENEMY_BULLET_SPEED_SMALL_MIN = 48
-export const ENEMY_BULLET_SPEED_SMALL_MAX = 74
+export const ENEMY_BULLET_SPEED_LARGE = 34
+export const ENEMY_BULLET_SPEED_SMALL_MIN = 38
+export const ENEMY_BULLET_SPEED_SMALL_MAX = 52
 export const ENEMY_BULLET_LIFETIME = 3.0          // seconds
 export const ENEMY_BULLET_RADIUS = 0.8
 
 // How long (seconds) it takes the small saucer to ramp to full nastiness.
-export const SAUCER_ESCALATION_TIME = 45
+export const SAUCER_ESCALATION_TIME = 60
 
 // Asteroid properties
 export const ASTEROID_LARGE_RADIUS = 8
