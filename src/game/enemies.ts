@@ -186,8 +186,8 @@ export const updateEnemies = (
       velocity = chooseVelocity(saucer, ship, difficulty)
       const turnGap =
         saucer.type === 'large'
-          ? randomRange(1600, 2600)
-          : lerp(1300, 650, difficulty) * randomRange(0.8, 1.2)
+          ? randomRange(1800, 2800)
+          : lerp(1900, 1100, difficulty) * randomRange(0.85, 1.15)
       nextTurnAt = now + turnGap
     }
 

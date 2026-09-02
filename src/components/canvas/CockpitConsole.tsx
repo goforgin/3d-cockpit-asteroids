@@ -2,43 +2,31 @@ import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-// A detailed lower control console that frames the bottom of the view like a
-// real cockpit: a curved dashboard shelf, multi-function display screens with
-// scrolling glow, clusters of backlit buttons, round gauges, and a throttle
-// quadrant. Authored in the cockpit's local frame (+z = forward, +y = up), so
-// it sits below the pilot's sightline and never blocks the crosshair.
+// A detailed control console framing the bottom of the view like a real
+// cockpit: a hood rail, multi-function display screens with a glow flicker,
+// clusters of backlit buttons, round gauges, and throttle/stick grips.
+//
+// Authored in the cockpit's local frame (+z = forward, +y = up). The camera has
+// a ~75deg vertical FOV, so at z~0.45 the view only reaches down to about
+// y=-0.35. Everything here lives in y ∈ [-0.08, -0.42] so it reads as a
+// dashboard along the lower third WITHOUT covering the centered crosshair.
 export const CockpitConsole = () => {
   const screenMat = useRef<THREE.MeshStandardMaterial>(null!)
 
   useFrame((state) => {
-    // Gentle brightness flicker on the MFD screens.
     if (screenMat.current) {
       screenMat.current.emissiveIntensity =
-        0.7 + 0.25 * Math.sin(state.clock.elapsedTime * 2.3)
+        0.8 + 0.3 * Math.sin(state.clock.elapsedTime * 2.3)
     }
   })
 
-  // Curved dashboard shelf built from angled segments.
-  const shelf = useMemo(() => {
-    const segs: { pos: [number, number, number]; rot: [number, number, number] }[] = []
-    const n = 7
-    for (let i = 0; i < n; i++) {
-      const t = (i / (n - 1) - 0.5) * 2 // -1..1
-      const x = t * 1.15
-      const yaw = -t * 0.5
-      segs.push({ pos: [x, -0.78, 0.52 - Math.abs(t) * 0.12], rot: [-Math.PI / 2.4, yaw, 0] })
-    }
-    return segs
-  }, [])
-
-  // Backlit button grid on the dash.
   const buttons = useMemo(() => {
     const out: { pos: [number, number, number]; color: string }[] = []
     const colors = ['#00e5ff', '#00ff88', '#ffcc33', '#ff5566']
     for (let r = 0; r < 2; r++) {
       for (let c = 0; c < 6; c++) {
         out.push({
-          pos: [-0.55 + c * 0.16, -0.86 + r * 0.06, 0.66 - r * 0.02],
+          pos: [-0.42 + c * 0.17, -0.32 - r * 0.05, 0.55],
           color: colors[(r * 6 + c) % colors.length],
         })
       }
@@ -46,46 +34,44 @@ export const CockpitConsole = () => {
     return out
   }, [])
 
-  const metal = (color: string, rough = 0.4, metalness = 0.8) => (
+  const metal = (color: string, rough = 0.45, metalness = 0.75) => (
     <meshStandardMaterial color={color} roughness={rough} metalness={metalness} />
   )
 
+  const TILT = -0.4
+
   return (
     <group>
-      {/* Curved dashboard shelf */}
-      {shelf.map((s, i) => (
-        <mesh key={`shelf-${i}`} position={s.pos} rotation={s.rot}>
-          <boxGeometry args={[0.42, 0.5, 0.08]} />
-          {metal('#26292e', 0.5, 0.75)}
-        </mesh>
-      ))}
+      {/* Hood / cowl rail — the top edge of the dashboard, just below center */}
+      <mesh position={[0, -0.09, 0.42]} rotation={[TILT, 0, 0]}>
+        <boxGeometry args={[2.7, 0.07, 0.28]} />
+        {metal('#303338', 0.5, 0.7)}
+      </mesh>
 
-      {/* Raised binnacle behind the shelf holding the screens */}
-      <mesh position={[0, -0.5, 0.34]} rotation={[-0.5, 0, 0]}>
-        <boxGeometry args={[2.5, 0.6, 0.12]} />
-        {metal('#1c1e22', 0.6, 0.6)}
+      {/* Main binnacle that holds the screens */}
+      <mesh position={[0, -0.24, 0.4]} rotation={[TILT, 0, 0]}>
+        <boxGeometry args={[2.6, 0.34, 0.12]} />
+        {metal('#1c1e22', 0.6, 0.55)}
       </mesh>
 
       {/* Three MFD screens */}
       {[
-        { x: -0.78, w: 0.62, color: '#0a2a33', em: '#00e5ff' },
-        { x: 0, w: 0.78, color: '#0a2a1e', em: '#00ff88' },
-        { x: 0.78, w: 0.62, color: '#0a1f33', em: '#3388ff' },
+        { x: -0.75, w: 0.6, color: '#0a2a33', em: '#00e5ff' },
+        { x: 0, w: 0.74, color: '#0a2a1e', em: '#00ff88' },
+        { x: 0.75, w: 0.6, color: '#0a1f33', em: '#3388ff' },
       ].map((mfd, i) => (
-        <group key={`mfd-${i}`} position={[mfd.x, -0.5, 0.41]} rotation={[-0.5, 0, 0]}>
-          {/* bezel */}
+        <group key={`mfd-${i}`} position={[mfd.x, -0.23, 0.47]} rotation={[TILT, 0, 0]}>
           <mesh>
-            <boxGeometry args={[mfd.w + 0.06, 0.42, 0.04]} />
-            {metal('#0b0c0e', 0.7, 0.5)}
+            <boxGeometry args={[mfd.w + 0.05, 0.26, 0.03]} />
+            {metal('#0b0c0e', 0.7, 0.4)}
           </mesh>
-          {/* screen */}
-          <mesh position={[0, 0, 0.03]}>
-            <boxGeometry args={[mfd.w, 0.34, 0.02]} />
+          <mesh position={[0, 0, 0.02]}>
+            <boxGeometry args={[mfd.w, 0.2, 0.02]} />
             <meshStandardMaterial
               ref={i === 1 ? screenMat : undefined}
               color={mfd.color}
               emissive={new THREE.Color(mfd.em)}
-              emissiveIntensity={0.75}
+              emissiveIntensity={0.85}
               roughness={0.25}
               metalness={0.1}
               toneMapped={false}
@@ -94,14 +80,14 @@ export const CockpitConsole = () => {
         </group>
       ))}
 
-      {/* Backlit buttons */}
+      {/* Backlit buttons below the screens */}
       {buttons.map((b, i) => (
-        <mesh key={`btn-${i}`} position={b.pos} rotation={[-Math.PI / 2.4, 0, 0]}>
-          <boxGeometry args={[0.1, 0.1, 0.05]} />
+        <mesh key={`btn-${i}`} position={b.pos} rotation={[TILT, 0, 0]}>
+          <boxGeometry args={[0.11, 0.09, 0.05]} />
           <meshStandardMaterial
             color={b.color}
             emissive={new THREE.Color(b.color)}
-            emissiveIntensity={0.6}
+            emissiveIntensity={0.7}
             roughness={0.3}
             metalness={0.4}
             toneMapped={false}
@@ -109,61 +95,60 @@ export const CockpitConsole = () => {
         </mesh>
       ))}
 
-      {/* Round gauges on the outer dash */}
-      {[-1.0, 1.0].map((x, i) => (
-        <group key={`gauge-${i}`} position={[x, -0.8, 0.5]} rotation={[-Math.PI / 2.4, 0, 0]}>
+      {/* Round gauges in the lower corners */}
+      {[-1.18, 1.18].map((x, i) => (
+        <group key={`gauge-${i}`} position={[x, -0.18, 0.48]} rotation={[TILT, 0, 0]}>
           <mesh>
-            <cylinderGeometry args={[0.13, 0.13, 0.04, 20]} />
+            <cylinderGeometry args={[0.14, 0.14, 0.04, 22]} />
             {metal('#0c0d0f', 0.6, 0.5)}
           </mesh>
           <mesh position={[0, 0.025, 0]}>
-            <cylinderGeometry args={[0.1, 0.1, 0.01, 20]} />
+            <cylinderGeometry args={[0.11, 0.11, 0.01, 22]} />
             <meshStandardMaterial
               color="#0a1a12"
               emissive={new THREE.Color(i === 0 ? '#00ff88' : '#ffcc33')}
-              emissiveIntensity={0.5}
+              emissiveIntensity={0.6}
               toneMapped={false}
             />
           </mesh>
-          {/* needle */}
           <mesh position={[0, 0.035, 0.03]} rotation={[0, 0, i === 0 ? 0.6 : -0.4]}>
-            <boxGeometry args={[0.012, 0.09, 0.005]} />
-            <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.8} toneMapped={false} />
+            <boxGeometry args={[0.014, 0.1, 0.006]} />
+            <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.9} toneMapped={false} />
           </mesh>
         </group>
       ))}
 
-      {/* Throttle quadrant on the right */}
-      <group position={[1.15, -0.85, 0.62]}>
+      {/* Throttle quadrant (right) */}
+      <group position={[0.95, -0.22, 0.55]}>
         <mesh>
-          <boxGeometry args={[0.18, 0.06, 0.3]} />
+          <boxGeometry args={[0.2, 0.06, 0.24]} />
           {metal('#17181b', 0.6, 0.6)}
         </mesh>
         {[-0.06, 0.06].map((lx, i) => (
-          <group key={`lever-${i}`} position={[lx, 0.02, 0.02]} rotation={[0.5 - i * 0.2, 0, 0]}>
-            <mesh position={[0, 0.09, 0]}>
-              <cylinderGeometry args={[0.015, 0.015, 0.2, 8]} />
+          <group key={`lever-${i}`} position={[lx, 0.04, 0.0]} rotation={[0.5 - i * 0.25, 0, 0]}>
+            <mesh position={[0, 0.08, 0]}>
+              <cylinderGeometry args={[0.015, 0.015, 0.16, 8]} />
               {metal('#3a3d42', 0.4, 0.7)}
             </mesh>
-            <mesh position={[0, 0.2, 0]}>
-              <sphereGeometry args={[0.035, 12, 12]} />
+            <mesh position={[0, 0.17, 0]}>
+              <sphereGeometry args={[0.032, 12, 12]} />
               <meshStandardMaterial color={i === 0 ? '#ff5566' : '#00e5ff'} roughness={0.3} metalness={0.5} />
             </mesh>
           </group>
         ))}
       </group>
 
-      {/* Center pedestal / joystick base on the left */}
-      <group position={[-1.15, -0.85, 0.62]}>
+      {/* Control stick (left) */}
+      <group position={[-0.95, -0.24, 0.55]}>
         <mesh>
-          <cylinderGeometry args={[0.08, 0.1, 0.1, 16]} />
+          <cylinderGeometry args={[0.09, 0.11, 0.08, 16]} />
           {metal('#17181b', 0.6, 0.6)}
         </mesh>
-        <mesh position={[0, 0.16, 0]}>
-          <cylinderGeometry args={[0.02, 0.02, 0.24, 10]} />
+        <mesh position={[0, 0.13, 0]} rotation={[0.25, 0, 0]}>
+          <cylinderGeometry args={[0.022, 0.022, 0.2, 10]} />
           {metal('#3a3d42', 0.4, 0.7)}
         </mesh>
-        <mesh position={[0, 0.3, 0]}>
+        <mesh position={[0, 0.24, 0.03]}>
           <sphereGeometry args={[0.05, 14, 14]} />
           <meshStandardMaterial color="#c0392b" roughness={0.35} metalness={0.4} />
         </mesh>

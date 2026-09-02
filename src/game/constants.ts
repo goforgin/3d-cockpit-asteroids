@@ -51,10 +51,14 @@ export const SAUCER_SMALL_DELAY = 46              // seconds into a wave
 export const SAUCER_SMALL_REPEAT = 34             // seconds between repeat smalls
 export const MAX_SAUCERS = 1
 
-// Movement speeds (units/s). Large is a slow, easy target; small is nimbler.
+// Movement speeds (units/s). Large is a slow, easy target; small is nimbler
+// but still slow enough that you can swing the crosshair onto it.
 export const SAUCER_LARGE_SPEED = 10
-export const SAUCER_SMALL_SPEED_MIN = 15
-export const SAUCER_SMALL_SPEED_MAX = 24
+export const SAUCER_SMALL_SPEED_MIN = 12
+export const SAUCER_SMALL_SPEED_MAX = 18
+
+// Extra lock-on capture radius for saucers so the reticle grabs them readily.
+export const SAUCER_LOCK_ASSIST = 5
 
 // Enemy bullets
 export const ENEMY_BULLET_SPEED_LARGE = 34

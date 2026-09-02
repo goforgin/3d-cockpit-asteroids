@@ -12,7 +12,7 @@ import { updateEnemies, updateEnemyBullets, spawnSaucer, getSaucerDifficulty } f
 import { wrappedDistance } from '../game/math'
 import {
   SHIP_RADIUS, SCORE_LARGE, SCORE_MEDIUM, SCORE_SMALL, SCORE_BONUS_SHIP, MAX_SPEED, FIRE_RATE,
-  PLAY_SPACE_SIZE, MAX_SAUCERS, SAUCER_SMALL_DELAY, SAUCER_SMALL_REPEAT, SCORE_SAUCER_LARGE, SCORE_SAUCER_SMALL, ENEMY_BULLET_RADIUS,
+  PLAY_SPACE_SIZE, MAX_SAUCERS, SAUCER_SMALL_DELAY, SAUCER_SMALL_REPEAT, SCORE_SAUCER_LARGE, SCORE_SAUCER_SMALL, ENEMY_BULLET_RADIUS, SAUCER_LOCK_ASSIST,
 } from '../game/constants'
 
 const scoreForType = (type: 'large' | 'medium' | 'small'): number =>
@@ -118,10 +118,11 @@ export const useGameSimulation = () => {
       inputManager.isKeyHeld('arrowup') ||
       inputManager.isKeyHeld('arrowdown')
 
-    // Rocks and saucers are both lockable.
+    // Rocks and saucers are both lockable. Saucers get an inflated capture
+    // radius so the reticle grabs the small, moving ones without pixel-perfect aim.
     const targets: Targetable[] = [
       ...aimState.asteroids.map((a) => ({ id: a.id, position: a.position, radius: a.radius })),
-      ...aimState.enemies.map((e) => ({ id: e.id, position: e.position, radius: e.radius })),
+      ...aimState.enemies.map((e) => ({ id: e.id, position: e.position, radius: e.radius + SAUCER_LOCK_ASSIST })),
     ]
     const currentLock = aimState.lockedAsteroidId
     const lockValid =
