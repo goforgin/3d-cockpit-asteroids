@@ -1,155 +1,153 @@
-import { useRef, useMemo } from 'react'
+import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-// A detailed control console framing the bottom of the view like a real
-// cockpit: a hood rail, multi-function display screens with a glow flicker,
-// clusters of backlit buttons, round gauges, and throttle/stick grips.
-//
-// Authored in the cockpit's local frame (+z = forward, +y = up). The camera has
-// a ~75deg vertical FOV, so at z~0.45 the view only reaches down to about
-// y=-0.35. Everything here lives in y ∈ [-0.08, -0.42] so it reads as a
-// dashboard along the lower third WITHOUT covering the centered crosshair.
+// Compact instrument panel along the BOTTOM of the forward window.
+// All meshes sit at z ≈ 0.38–0.46 (in front of the camera, past the near clip)
+// and y ≈ -0.18 to -0.36 so they occupy the lower ~25% of the view and leave
+// the crosshair / sky clear.
 export const CockpitConsole = () => {
   const screenMat = useRef<THREE.MeshStandardMaterial>(null!)
 
   useFrame((state) => {
     if (screenMat.current) {
       screenMat.current.emissiveIntensity =
-        0.8 + 0.3 * Math.sin(state.clock.elapsedTime * 2.3)
+        1.4 + 0.35 * Math.sin(state.clock.elapsedTime * 2.2)
     }
   })
 
-  const buttons = useMemo(() => {
-    const out: { pos: [number, number, number]; color: string }[] = []
-    const colors = ['#00e5ff', '#00ff88', '#ffcc33', '#ff5566']
-    for (let r = 0; r < 2; r++) {
-      for (let c = 0; c < 6; c++) {
-        out.push({
-          pos: [-0.42 + c * 0.17, -0.32 - r * 0.05, 0.55],
-          color: colors[(r * 6 + c) % colors.length],
-        })
-      }
-    }
-    return out
-  }, [])
-
-  const metal = (color: string, rough = 0.45, metalness = 0.75) => (
-    <meshStandardMaterial color={color} roughness={rough} metalness={metalness} />
+  const metal = (color: string, rough = 0.4, metalness = 0.7) => (
+    <meshStandardMaterial
+      color={color}
+      roughness={rough}
+      metalness={metalness}
+      emissive={new THREE.Color('#22252a')}
+      emissiveIntensity={0.2}
+    />
   )
 
-  const TILT = -0.4
+  const TILT = -0.28
+  const Z = 0.42
+
+  const buttons: { x: number; y: number; color: string }[] = []
+  const palette = ['#00e5ff', '#00ff88', '#ffcc33', '#ff5566']
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 5; c++) {
+      buttons.push({
+        x: -0.28 + c * 0.14,
+        y: -0.33 - r * 0.045,
+        color: palette[(r * 5 + c) % palette.length],
+      })
+    }
+  }
 
   return (
     <group>
-      {/* Hood / cowl rail — the top edge of the dashboard, just below center */}
-      <mesh position={[0, -0.09, 0.42]} rotation={[TILT, 0, 0]}>
-        <boxGeometry args={[2.7, 0.07, 0.28]} />
-        {metal('#303338', 0.5, 0.7)}
+      {/* Dash shelf — full width of the window, bottom of the view */}
+      <mesh position={[0, -0.26, Z]} rotation={[TILT, 0, 0]}>
+        <boxGeometry args={[1.55, 0.22, 0.08]} />
+        {metal('#3d424a', 0.4, 0.72)}
       </mesh>
-
-      {/* Main binnacle that holds the screens */}
-      <mesh position={[0, -0.24, 0.4]} rotation={[TILT, 0, 0]}>
-        <boxGeometry args={[2.6, 0.34, 0.12]} />
-        {metal('#1c1e22', 0.6, 0.55)}
+      {/* Lip / hood so the panel has thickness */}
+      <mesh position={[0, -0.155, Z + 0.01]} rotation={[TILT, 0, 0]}>
+        <boxGeometry args={[1.55, 0.03, 0.1]} />
+        {metal('#5a6068', 0.35, 0.8)}
       </mesh>
 
       {/* Three MFD screens */}
       {[
-        { x: -0.75, w: 0.6, color: '#0a2a33', em: '#00e5ff' },
-        { x: 0, w: 0.74, color: '#0a2a1e', em: '#00ff88' },
-        { x: 0.75, w: 0.6, color: '#0a1f33', em: '#3388ff' },
+        { x: -0.46, w: 0.36, em: '#00e5ff', bg: '#042028' },
+        { x: 0.0, w: 0.44, em: '#00ff88', bg: '#042014' },
+        { x: 0.46, w: 0.36, em: '#4aa3ff', bg: '#041428' },
       ].map((mfd, i) => (
-        <group key={`mfd-${i}`} position={[mfd.x, -0.23, 0.47]} rotation={[TILT, 0, 0]}>
+        <group key={mfd.em} position={[mfd.x, -0.22, Z + 0.05]} rotation={[TILT, 0, 0]}>
           <mesh>
-            <boxGeometry args={[mfd.w + 0.05, 0.26, 0.03]} />
-            {metal('#0b0c0e', 0.7, 0.4)}
+            <boxGeometry args={[mfd.w + 0.03, 0.14, 0.012]} />
+            {metal('#111318', 0.6, 0.4)}
           </mesh>
-          <mesh position={[0, 0, 0.02]}>
-            <boxGeometry args={[mfd.w, 0.2, 0.02]} />
+          <mesh position={[0, 0, 0.008]}>
+            <planeGeometry args={[mfd.w, 0.11]} />
             <meshStandardMaterial
               ref={i === 1 ? screenMat : undefined}
-              color={mfd.color}
+              color={mfd.bg}
               emissive={new THREE.Color(mfd.em)}
-              emissiveIntensity={0.85}
-              roughness={0.25}
-              metalness={0.1}
+              emissiveIntensity={1.5}
+              roughness={0.2}
+              metalness={0.05}
               toneMapped={false}
             />
           </mesh>
         </group>
       ))}
 
-      {/* Backlit buttons below the screens */}
+      {/* Backlit buttons under the center screen */}
       {buttons.map((b, i) => (
-        <mesh key={`btn-${i}`} position={b.pos} rotation={[TILT, 0, 0]}>
-          <boxGeometry args={[0.11, 0.09, 0.05]} />
+        <mesh key={i} position={[b.x, b.y, Z + 0.055]} rotation={[TILT, 0, 0]}>
+          <boxGeometry args={[0.1, 0.032, 0.02]} />
           <meshStandardMaterial
             color={b.color}
             emissive={new THREE.Color(b.color)}
-            emissiveIntensity={0.7}
+            emissiveIntensity={1.1}
             roughness={0.3}
-            metalness={0.4}
+            metalness={0.35}
             toneMapped={false}
           />
         </mesh>
       ))}
 
-      {/* Round gauges in the lower corners */}
-      {[-1.18, 1.18].map((x, i) => (
-        <group key={`gauge-${i}`} position={[x, -0.18, 0.48]} rotation={[TILT, 0, 0]}>
+      {/* Round gauges */}
+      {[-0.68, 0.68].map((x, i) => (
+        <group key={x} position={[x, -0.23, Z + 0.055]} rotation={[TILT, 0, 0]}>
           <mesh>
-            <cylinderGeometry args={[0.14, 0.14, 0.04, 22]} />
-            {metal('#0c0d0f', 0.6, 0.5)}
+            <cylinderGeometry args={[0.07, 0.07, 0.02, 20]} />
+            {metal('#15171a', 0.5, 0.5)}
           </mesh>
-          <mesh position={[0, 0.025, 0]}>
-            <cylinderGeometry args={[0.11, 0.11, 0.01, 22]} />
+          <mesh position={[0, 0.012, 0]}>
+            <cylinderGeometry args={[0.055, 0.055, 0.008, 20]} />
             <meshStandardMaterial
-              color="#0a1a12"
+              color="#05140c"
               emissive={new THREE.Color(i === 0 ? '#00ff88' : '#ffcc33')}
-              emissiveIntensity={0.6}
+              emissiveIntensity={1.1}
               toneMapped={false}
             />
           </mesh>
-          <mesh position={[0, 0.035, 0.03]} rotation={[0, 0, i === 0 ? 0.6 : -0.4]}>
-            <boxGeometry args={[0.014, 0.1, 0.006]} />
-            <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.9} toneMapped={false} />
+          <mesh position={[0, 0.02, 0.02]} rotation={[0, 0, i === 0 ? 0.5 : -0.35]}>
+            <boxGeometry args={[0.008, 0.05, 0.004]} />
+            <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={1} toneMapped={false} />
           </mesh>
         </group>
       ))}
 
-      {/* Throttle quadrant (right) */}
-      <group position={[0.95, -0.22, 0.55]}>
+      {/* Throttle (right) */}
+      <group position={[0.58, -0.32, Z + 0.05]}>
         <mesh>
-          <boxGeometry args={[0.2, 0.06, 0.24]} />
-          {metal('#17181b', 0.6, 0.6)}
+          <boxGeometry args={[0.12, 0.04, 0.08]} />
+          {metal('#2a2d32', 0.5, 0.6)}
         </mesh>
-        {[-0.06, 0.06].map((lx, i) => (
-          <group key={`lever-${i}`} position={[lx, 0.04, 0.0]} rotation={[0.5 - i * 0.25, 0, 0]}>
-            <mesh position={[0, 0.08, 0]}>
-              <cylinderGeometry args={[0.015, 0.015, 0.16, 8]} />
-              {metal('#3a3d42', 0.4, 0.7)}
-            </mesh>
-            <mesh position={[0, 0.17, 0]}>
-              <sphereGeometry args={[0.032, 12, 12]} />
-              <meshStandardMaterial color={i === 0 ? '#ff5566' : '#00e5ff'} roughness={0.3} metalness={0.5} />
-            </mesh>
-          </group>
-        ))}
+        <group position={[0.03, 0.03, 0]} rotation={[0.55, 0, 0]}>
+          <mesh position={[0, 0.05, 0]}>
+            <cylinderGeometry args={[0.01, 0.01, 0.1, 8]} />
+            {metal('#6a6e74', 0.35, 0.75)}
+          </mesh>
+          <mesh position={[0, 0.11, 0]}>
+            <sphereGeometry args={[0.022, 10, 10]} />
+            <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={0.6} />
+          </mesh>
+        </group>
       </group>
 
-      {/* Control stick (left) */}
-      <group position={[-0.95, -0.24, 0.55]}>
+      {/* Stick (left) */}
+      <group position={[-0.58, -0.32, Z + 0.05]}>
         <mesh>
-          <cylinderGeometry args={[0.09, 0.11, 0.08, 16]} />
-          {metal('#17181b', 0.6, 0.6)}
+          <cylinderGeometry args={[0.04, 0.05, 0.04, 12]} />
+          {metal('#2a2d32', 0.5, 0.6)}
         </mesh>
-        <mesh position={[0, 0.13, 0]} rotation={[0.25, 0, 0]}>
-          <cylinderGeometry args={[0.022, 0.022, 0.2, 10]} />
-          {metal('#3a3d42', 0.4, 0.7)}
+        <mesh position={[0, 0.07, 0.01]} rotation={[0.3, 0, 0]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.12, 8]} />
+          {metal('#6a6e74', 0.35, 0.75)}
         </mesh>
-        <mesh position={[0, 0.24, 0.03]}>
-          <sphereGeometry args={[0.05, 14, 14]} />
+        <mesh position={[0, 0.14, 0.03]}>
+          <sphereGeometry args={[0.028, 12, 12]} />
           <meshStandardMaterial color="#c0392b" roughness={0.35} metalness={0.4} />
         </mesh>
       </group>

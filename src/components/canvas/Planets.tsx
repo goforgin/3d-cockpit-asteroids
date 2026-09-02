@@ -19,10 +19,10 @@ interface PlanetDef {
 // the ship translates/wraps — they only sweep past as you rotate, which is
 // exactly the directional reference we want.
 const PLANETS: PlanetDef[] = [
-  { offset: [-1200, 350, -1800], radius: 220, color: '#c96b3f', emissive: '#3a1a0e', atmosphere: '#ff9a5a', clouds: '#ffd9b0', moons: 1, spin: 0.03 },
-  { offset: [1600, -250, -1400], radius: 300, color: '#3f6fc9', emissive: '#0e1a3a', atmosphere: '#6aa8ff', clouds: '#bfe0ff', ring: true, moons: 2, spin: 0.02 },
-  { offset: [900, 620, 1700], radius: 170, color: '#4fae8b', emissive: '#0e2a1f', atmosphere: '#8affcf', clouds: '#d6fff0', spin: 0.04 },
-  { offset: [-1500, -520, 1500], radius: 130, color: '#b0553f', emissive: '#2a0e0e', atmosphere: '#ff8a6a', spin: 0.05 },
+  { offset: [-3000, 900, -4200], radius: 320, color: '#c96b3f', emissive: '#2a1209', atmosphere: '#ff9a5a', clouds: '#ffd9b0', moons: 1, spin: 0.03 },
+  { offset: [3800, -700, -3400], radius: 380, color: '#3f6fc9', emissive: '#0a1224', atmosphere: '#6aa8ff', clouds: '#bfe0ff', ring: true, moons: 2, spin: 0.02 },
+  { offset: [2200, 1500, 4000], radius: 210, color: '#4fae8b', emissive: '#0a1c15', atmosphere: '#8affcf', clouds: '#d6fff0', spin: 0.04 },
+  { offset: [-3400, -1200, 3600], radius: 170, color: '#b0553f', emissive: '#1c0909', atmosphere: '#ff8a6a', spin: 0.05 },
 ]
 
 export const Planets = () => {

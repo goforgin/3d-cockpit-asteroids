@@ -4,27 +4,26 @@ import { useGameStore } from '../../store/gameStore'
 import * as THREE from 'three'
 import { CockpitConsole } from './CockpitConsole'
 
+// First-person cockpit. The camera sits at the ship origin and looks along
+// the ship's forward axis. All cockpit meshes live in an inner group that is
+// yawed 180° so +Z is in FRONT of the camera. Geometry must stay at z > ~0.2
+// so nothing intersects the near clip plane (that is what produced the giant
+// black slab covering the lower half of the screen).
 export const Ship = () => {
   const cockpitRef = useRef<THREE.Group>(null!)
   const { camera } = useThree()
 
-  // Configure the camera once on mount.
   useEffect(() => {
     if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
       const cam = camera as THREE.PerspectiveCamera
       cam.fov = 75
-      cam.near = 0.05
-      cam.far = 5000 // keep distant background planets visible
+      cam.near = 0.12
+      cam.far = 5000
       cam.updateProjectionMatrix()
     }
-    // Match the Euler order used to derive the forward vector (see shipPhysics).
     camera.rotation.order = 'YXZ'
   }, [camera])
 
-  // Drive the camera (and the cockpit that frames it) directly from ship state
-  // every frame. The pilot sits at the ship's position and looks along the
-  // ship's forward axis, so the crosshair (screen center) always points where
-  // the ship is aimed.
   useFrame(() => {
     const ship = useGameStore.getState().state.ship
     camera.position.set(ship.position.x, ship.position.y, ship.position.z)
@@ -36,102 +35,49 @@ export const Ship = () => {
     }
   })
 
+  const frameMat = (
+    <meshStandardMaterial
+      color="#4a4e55"
+      roughness={0.45}
+      metalness={0.65}
+      emissive="#1a1c20"
+      emissiveIntensity={0.25}
+    />
+  )
+
   return (
     <group ref={cockpitRef}>
-      {/* Inner group flips the cockpit so the canopy/window faces forward (-Z),
-          which is the direction the camera looks. */}
       <group rotation={[0, Math.PI, 0]}>
-      {/* Detailed control console (dashboard, MFDs, buttons, gauges, throttle) */}
-      <CockpitConsole />
+        {/* Local fill light so the frame/console read as metal, not silhouette */}
+        <pointLight position={[0, 0.05, 0.2]} intensity={2.2} distance={4} color="#c8d6ff" />
+        <pointLight position={[0, -0.2, 0.35]} intensity={1.4} distance={3} color="#ffc27a" />
 
-      {/* Dashboard base - dark metal below view */}
-      <mesh position={[0, -0.9, 0.1]} rotation={[-Math.PI / 2, 0, 0]}>
-        <boxGeometry args={[2.6, 1.1, 0.1]} />
-        <meshStandardMaterial color="#202226" roughness={0.5} metalness={0.7} />
-      </mesh>
-      
-      {/* Left side frame strut */}
-      <mesh position={[-1.2, 0, 0]}>
-        <boxGeometry args={[0.2, 1.5, 1.5]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      
-      {/* Right side frame strut */}
-      <mesh position={[1.2, 0, 0]}>
-        <boxGeometry args={[0.2, 1.5, 1.5]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      
-      {/* Top canopy frame */}
-      <mesh position={[0, 0.7, 0]}>
-        <boxGeometry args={[2.5, 0.1, 1.5]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      
-      {/* Top frame struts */}
-      <mesh position={[-1.1, 0.7, 0]}>
-        <boxGeometry args={[0.2, 0.6, 1.5]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      <mesh position={[1.1, 0.7, 0]}>
-        <boxGeometry args={[0.2, 0.6, 1.5]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      
-      {/* Rear wall */}
-      <mesh position={[0, 0, -0.8]}>
-        <boxGeometry args={[2.4, 1.6, 0.1]} />
-        <meshStandardMaterial color="#2a2a2a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      
-      {/* Rear frame */}
-      <mesh position={[-1.1, 0.6, -0.75]}>
-        <boxGeometry args={[0.2, 0.8, 0.2]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      <mesh position={[1.1, 0.6, -0.75]}>
-        <boxGeometry args={[0.2, 0.8, 0.2]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      <mesh position={[-1.1, -0.6, -0.75]}>
-        <boxGeometry args={[0.2, 0.8, 0.2]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      <mesh position={[1.1, -0.6, -0.75]}>
-        <boxGeometry args={[0.2, 0.8, 0.2]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      
-      {/* Subtle glass canopy - kept very transparent so it never obscures aim */}
-      <mesh position={[0, 0, 0.6]} rotation={[0, 0, 0]}>
-        <boxGeometry args={[2.3, 1.4, 0.05]} />
-        <meshPhysicalMaterial
-          transparent={true}
-          opacity={0.08}
-          roughness={0.05}
-          metalness={0.1}
-          clearcoat={1.0}
-          clearcoatRoughness={0.1}
-        />
-      </mesh>
-      
-      {/* Dark frame at viewport edges for vignette effect */}
-      <mesh position={[-1.3, 0, 0.55]} rotation={[0, 0, 0]}>
-        <boxGeometry args={[0.2, 1.6, 0.2]} />
-        <meshStandardMaterial color="#000000" roughness={1} metalness={0} />
-      </mesh>
-      <mesh position={[1.3, 0, 0.55]} rotation={[0, 0, 0]}>
-        <boxGeometry args={[0.2, 1.6, 0.2]} />
-        <meshStandardMaterial color="#000000" roughness={1} metalness={0} />
-      </mesh>
-      <mesh position={[0, 0.8, 0.55]} rotation={[0, 0, 0]}>
-        <boxGeometry args={[2.6, 0.2, 0.2]} />
-        <meshStandardMaterial color="#000000" roughness={1} metalness={0} />
-      </mesh>
-      <mesh position={[0, -0.8, 0.55]} rotation={[0, 0, 0]}>
-        <boxGeometry args={[2.6, 0.2, 0.2]} />
-        <meshStandardMaterial color="#000000" roughness={1} metalness={0} />
-      </mesh>
+        {/* Left window pillar */}
+        <mesh position={[-0.72, 0.02, 0.4]}>
+          <boxGeometry args={[0.12, 0.72, 0.1]} />
+          {frameMat}
+        </mesh>
+        {/* Right window pillar */}
+        <mesh position={[0.72, 0.02, 0.4]}>
+          <boxGeometry args={[0.12, 0.72, 0.1]} />
+          {frameMat}
+        </mesh>
+        {/* Top canopy bar */}
+        <mesh position={[0, 0.36, 0.4]}>
+          <boxGeometry args={[1.56, 0.08, 0.1]} />
+          {frameMat}
+        </mesh>
+        {/* Tiny corner gussets */}
+        <mesh position={[-0.68, 0.32, 0.4]} rotation={[0, 0, 0.6]}>
+          <boxGeometry args={[0.16, 0.05, 0.09]} />
+          {frameMat}
+        </mesh>
+        <mesh position={[0.68, 0.32, 0.4]} rotation={[0, 0, -0.6]}>
+          <boxGeometry args={[0.16, 0.05, 0.09]} />
+          {frameMat}
+        </mesh>
+
+        <CockpitConsole />
       </group>
     </group>
   )

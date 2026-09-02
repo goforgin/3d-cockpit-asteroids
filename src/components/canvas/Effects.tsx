@@ -17,8 +17,8 @@ export const Effects = () => {
       />
       {/* Vignette for cockpit feel */}
       <Vignette
-        offset={0.3}
-        darkness={0.7}
+        offset={0.4}
+        darkness={0.45}
       />
     </EffectComposer>
   )
