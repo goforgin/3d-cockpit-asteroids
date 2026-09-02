@@ -20,6 +20,7 @@ export const Scene = () => {
   
   useFrame((state) => {
     if (starRef.current) {
+      starRef.current.name = 'starfield'
       starRef.current.rotation.y = state.clock.elapsedTime * 0.05
     }
   })

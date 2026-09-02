@@ -65,8 +65,10 @@ export const MonitorFeeds = () => {
 
     const cockpit = scene.getObjectByName('cockpit')
     const lock = scene.getObjectByName('lock-reticle')
+    const stars = scene.getObjectByName('starfield')
     if (cockpit) cockpit.visible = false
     if (lock) lock.visible = false
+    if (stars) stars.visible = false
 
     const prevTarget = gl.getRenderTarget()
     const prevAutoClear = gl.autoClear
@@ -103,6 +105,7 @@ export const MonitorFeeds = () => {
 
     if (cockpit) cockpit.visible = true
     if (lock) lock.visible = true
+    if (stars) stars.visible = true
   }, -1)
 
   return null
