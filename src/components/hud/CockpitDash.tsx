@@ -373,9 +373,15 @@ export const CockpitDash = () => {
 
   // Create world scene (without cockpit, HUD, postprocessing)
   const worldSceneRef = useRef<THREE.Scene | null>(null)
+  const starsRef = useRef<THREE.Points | null>(null)
+  const asteroidMeshesRef = useRef<THREE.Mesh[]>([])
+  const enemyMeshesRef = useRef<THREE.Mesh[]>([])
+  const sceneBuiltRef = useRef(false)
   
-  // Build world scene once
+  // Build world scene once when game starts
   useEffect(() => {
+    if (gameState !== 'playing' || sceneBuiltRef.current) return
+    
     const scene = new THREE.Scene()
     
     // Stars
@@ -393,8 +399,10 @@ export const CockpitDash = () => {
     const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: true })
     const stars = new THREE.Points(starsGeometry, starsMaterial)
     scene.add(stars)
+    starsRef.current = stars
     
     // Asteroids - use random colors based on type
+    const asteroidMeshes: THREE.Mesh[] = []
     asteroids.forEach((asteroid) => {
       const geometry = new THREE.IcosahedronGeometry(asteroid.radius, 0)
       const color = asteroid.type === 'large' ? 0x888888 : asteroid.type === 'medium' ? 0x666666 : 0x555555
@@ -407,9 +415,12 @@ export const CockpitDash = () => {
       mesh.position.set(asteroid.position.x, asteroid.position.y, asteroid.position.z)
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0)
       scene.add(mesh)
+      asteroidMeshes.push(mesh)
     })
+    asteroidMeshesRef.current = asteroidMeshes
     
     // Enemies (saucers)
+    const enemyMeshes: THREE.Mesh[] = []
     enemies.forEach((enemy) => {
       const geometry = new THREE.ConeGeometry(enemy.radius, enemy.radius * 1.5, 8)
       const material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
@@ -417,10 +428,32 @@ export const CockpitDash = () => {
       mesh.position.set(enemy.position.x, enemy.position.y, enemy.position.z)
       mesh.rotation.z = Math.PI / 2
       scene.add(mesh)
+      enemyMeshes.push(mesh)
     })
+    enemyMeshesRef.current = enemyMeshes
     
     worldSceneRef.current = scene
-  }, [asteroids, enemies])
+    sceneBuiltRef.current = true
+  }, [gameState])
+  
+  // Update mesh positions each frame
+  useFrame(() => {
+    if (!sceneBuiltRef.current || !worldSceneRef.current) return
+    
+    // Update asteroid positions
+    asteroidMeshesRef.current.forEach((mesh, i) => {
+      if (asteroids[i]) {
+        mesh.position.set(asteroids[i].position.x, asteroids[i].position.y, asteroids[i].position.z)
+      }
+    })
+    
+    // Update enemy positions
+    enemyMeshesRef.current.forEach((mesh, i) => {
+      if (enemies[i]) {
+        mesh.position.set(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z)
+      }
+    })
+  })
 
   if (gameState !== 'playing' || !worldSceneRef.current) {
     return (
