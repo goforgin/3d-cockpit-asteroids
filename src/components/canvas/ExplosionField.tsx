@@ -18,6 +18,15 @@ export const ExplosionField = () => {
     const store = useGameStore.getState()
     const storeExplosions = store.state.explosions || []
 
+    // New game / death clears the store array — also drop the local cache or
+    // a ship-death burst would keep drawing (and stay additive-white) after restart.
+    if (storeExplosions.length === 0 && workingRef.current.length > 0) {
+      workingRef.current = []
+      seenRef.current.clear()
+      force((n) => (n + 1) % 1000000)
+      return
+    }
+
     // Seed newly-spawned explosions into the working set once.
     for (const e of storeExplosions) {
       if (!seenRef.current.has(e.id)) {
@@ -52,7 +61,7 @@ export const ExplosionField = () => {
   })
 
   return (
-    <group>
+    <group name="explosions">
       {workingRef.current.map((explosion) => (
         <ExplosionParticles key={explosion.id} explosion={explosion} />
       ))}

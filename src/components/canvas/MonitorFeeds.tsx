@@ -59,6 +59,9 @@ export const MonitorFeeds = () => {
     const feeds = feedsRef.current
     if (!feeds) return
     if (useGameStore.getState().state.gameState !== 'playing') return
+    // Skip aux cameras during the death flash — additive debris at the camera
+    // is what turned the whole screen white on ship destroy.
+    if (Date.now() < useGameStore.getState().state.shipHitAt + 1600) return
 
     const { gl, scene } = state
     const ship = useGameStore.getState().state.ship
@@ -67,6 +70,7 @@ export const MonitorFeeds = () => {
     const lock = scene.getObjectByName('lock-reticle')
     const stars = scene.getObjectByName('starfield')
     const shield = scene.getObjectByName('shield-bubble')
+    const explosions = scene.getObjectByName('explosions')
 
     const prevTarget = gl.getRenderTarget()
     const prevAutoClear = gl.autoClear
@@ -80,6 +84,7 @@ export const MonitorFeeds = () => {
       if (lock) lock.visible = false
       if (stars) stars.visible = false
       if (shield) shield.visible = false
+      if (explosions) explosions.visible = false
 
       gl.autoClear = true
 
@@ -115,6 +120,7 @@ export const MonitorFeeds = () => {
       if (cockpit) cockpit.visible = true
       if (lock) lock.visible = true
       if (stars) stars.visible = true
+      if (explosions) explosions.visible = true
       // Shield visibility is owned by ShieldBubble's useFrame; don't force it on.
     }
   }, -1)

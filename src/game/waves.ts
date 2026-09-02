@@ -38,8 +38,7 @@ export const generateWave = (waveNumber: number): SpawnedAsteroid[] => {
     const spawnRadius = randomRange(half * 0.72, half * 0.96)
     const position = randomOnSphere(spawnRadius)
 
-    // Mostly random drift with only a gentle inward bias — the field slowly
-    // closes in over time instead of rushing the ship the instant you spawn.
+    // Head mostly toward the origin (ship spawn) so sitting still is dangerous.
     const speed = randomRange(ASTEROID_MIN_SPEED, ASTEROID_MAX_SPEED)
     const inward = {
       x: -position.x / spawnRadius,
@@ -48,9 +47,9 @@ export const generateWave = (waveNumber: number): SpawnedAsteroid[] => {
     }
     const jitter = randomOnSphere(1)
     const velocity = {
-      x: (inward.x * 0.4 + jitter.x * 0.6) * speed,
-      y: (inward.y * 0.4 + jitter.y * 0.6) * speed,
-      z: (inward.z * 0.4 + jitter.z * 0.6) * speed,
+      x: (inward.x * 0.78 + jitter.x * 0.22) * speed,
+      y: (inward.y * 0.78 + jitter.y * 0.22) * speed,
+      z: (inward.z * 0.78 + jitter.z * 0.22) * speed,
     }
 
     asteroids.push({

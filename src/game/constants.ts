@@ -29,12 +29,11 @@ export const RESPAWN_INVULN = 3.0                 // seconds
 // zone, so you must keep dodging. Fly off one edge and you reappear on the
 // opposite side (radar included).
 export const PLAY_SPACE_SIZE = 110                // 110x110x110 units
-export const SHIP_RADIUS = 3.0                    // collision radius
+export const SHIP_RADIUS = 3.6                    // collision radius
 
-// Asteroid drift speed (units/s). Rocks drift mostly randomly with a slight
-// inward bias so the field slowly closes in without being an instant death.
-export const ASTEROID_MIN_SPEED = 9
-export const ASTEROID_MAX_SPEED = 16
+// Asteroid drift speed (units/s). Stronger inward bias so rocks close on you.
+export const ASTEROID_MIN_SPEED = 13
+export const ASTEROID_MAX_SPEED = 24
 
 // --- Enemy saucers (classic Asteroids UFOs) ---
 export const SCORE_SAUCER_LARGE = 200

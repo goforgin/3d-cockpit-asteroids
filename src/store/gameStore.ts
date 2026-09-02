@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { GameState, EnemySaucer, EnemyBullet } from '../game/types'
 import { generateWave } from '../game/waves'
 import { destroyAsteroid } from '../game/asteroids'
-import { spawnExplosion as buildExplosion, spawnShipExplosion } from '../game/explosions'
+import { spawnExplosion as buildExplosion } from '../game/explosions'
 import { RESPAWN_INVULN, SCORE_BONUS_SHIP, FIRE_RATE, LASER_SPEED, MAX_LASERS, LASER_LIFETIME, SHIELD_HITS_PER_SHIP, SAUCER_LARGE_DELAY } from '../game/constants'
 import { audioManager } from '../audio/audioManager'
 import { getForwardVector } from '../game/shipPhysics'
@@ -132,13 +132,10 @@ export const useGameStore = create<GameStore>((set) => ({
   loseLife: () => set((state) => {
     const now = Date.now()
     const newLives = state.state.lives - 1
-    const hitPos = { ...state.state.ship.position }
 
-    // Fiery burst centered on the cockpit — debris flies outward around the
-    // camera. We keep the camera at the hit position (rather than teleporting to
-    // the origin) so the explosion reads as "your ship blew up right here".
-    const shipBlast = spawnShipExplosion(hitPos)
-
+    // Death VFX is the HUD overlay (flames + SHIP DESTROYED). Do NOT spawn an
+    // additive particle burst on the camera — that fills the view with white
+    // and can stick the GPU blend mode so even a new game stays blank.
     const newState: GameState = {
       ...state.state,
       lives: newLives,
@@ -149,13 +146,11 @@ export const useGameStore = create<GameStore>((set) => ({
         angularVelocity: { yaw: 0, pitch: 0 },
         invulnerableUntil: now + RESPAWN_INVULN * 1000,
         shieldActiveUntil: 0,
-        shieldHitsLeft: SHIELD_HITS_PER_SHIP, // Reset shield on new life
+        shieldHitsLeft: SHIELD_HITS_PER_SHIP,
       },
-      // Keep asteroids on death - player respawns into same wave
       asteroids: state.state.asteroids,
       lasers: [],
-      explosions: [...state.state.explosions, shipBlast],
-      // Clear enemy fire so you don't instantly die again on respawn.
+      explosions: [],
       enemyBullets: [],
     }
     
@@ -315,7 +310,11 @@ export const useGameStore = create<GameStore>((set) => ({
   })),
   
   removeAsteroidAndSplit: (id) => set((state) => {
-    const { remaining, spawned } = destroyAsteroid(state.state.asteroids, id)
+    const { remaining, spawned } = destroyAsteroid(
+      state.state.asteroids,
+      id,
+      state.state.ship.position
+    )
     return {
       state: {
         ...state.state,
