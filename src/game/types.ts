@@ -95,6 +95,7 @@ export interface GameState {
   shipHitAt: number                 // timestamp of last ship destruction (for VFX/overlay)
   waveStartTime: number             // when the current wave began (drives saucer spawns)
   nextSaucerAt: number              // timestamp the next saucer is allowed to spawn
+  largeSaucerUsed: boolean          // the once-per-wave large saucer has appeared
 }
 
 export interface WaveConfig {

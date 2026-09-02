@@ -12,7 +12,7 @@ import { updateEnemies, updateEnemyBullets, spawnSaucer, getSaucerDifficulty } f
 import { wrappedDistance } from '../game/math'
 import {
   SHIP_RADIUS, SCORE_LARGE, SCORE_MEDIUM, SCORE_SMALL, SCORE_BONUS_SHIP, MAX_SPEED, FIRE_RATE,
-  PLAY_SPACE_SIZE, MAX_SAUCERS, SAUCER_SMALL_DELAY, SCORE_SAUCER_LARGE, SCORE_SAUCER_SMALL, ENEMY_BULLET_RADIUS,
+  PLAY_SPACE_SIZE, MAX_SAUCERS, SAUCER_SMALL_DELAY, SAUCER_SMALL_REPEAT, SCORE_SAUCER_LARGE, SCORE_SAUCER_SMALL, ENEMY_BULLET_RADIUS,
 } from '../game/constants'
 
 const scoreForType = (type: 'large' | 'medium' | 'small'): number =>
@@ -85,18 +85,26 @@ export const useGameSimulation = () => {
       updateEnemyBullets(useGameStore.getState().state.enemyBullets, deltaTime)
     )
 
-    // Spawn saucers on a shrinking schedule so you can't camp a wave forever.
+    // Saucer spawns: one large saucer midway through the wave, then only a small
+    // saucer if you're taking a long time (repeating on a long timer). Only ever
+    // one saucer at a time.
     const spawnState = useGameStore.getState().state
     if (now >= spawnState.nextSaucerAt && spawnState.enemies.length < MAX_SAUCERS) {
-      const type = waveElapsed >= SAUCER_SMALL_DELAY ? 'small' : 'large'
-      const saucer = spawnSaucer(type, now, getSaucerDifficulty(waveElapsed))
-      useGameStore.getState().setEnemies([...spawnState.enemies, saucer])
-      const gap =
-        type === 'large'
-          ? 14000
-          : Math.max(8000, 16000 - (waveElapsed - SAUCER_SMALL_DELAY) * 100)
-      useGameStore.getState().scheduleNextSaucer(now + gap)
-      audioManager.playSaucerSpawn()
+      if (!spawnState.largeSaucerUsed) {
+        // The once-per-wave large, easy saucer.
+        const saucer = spawnSaucer('large', now, 0)
+        useGameStore.getState().setEnemies([...spawnState.enemies, saucer])
+        // After it's gone, the small one won't appear until the small delay.
+        const nextAt = spawnState.waveStartTime + SAUCER_SMALL_DELAY * 1000
+        useGameStore.getState().scheduleNextSaucer(Math.max(now + 12000, nextAt), true)
+        audioManager.playSaucerSpawn()
+      } else {
+        // A lone small saucer; repeats on a long timer if the wave drags on.
+        const saucer = spawnSaucer('small', now, getSaucerDifficulty(waveElapsed))
+        useGameStore.getState().setEnemies([...spawnState.enemies, saucer])
+        useGameStore.getState().scheduleNextSaucer(now + SAUCER_SMALL_REPEAT * 1000, true)
+        audioManager.playSaucerSpawn()
+      }
     }
 
     // Update lock-on target. The lock is "sticky": once acquired it stays on

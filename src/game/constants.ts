@@ -31,9 +31,10 @@ export const RESPAWN_INVULN = 3.0                 // seconds
 export const PLAY_SPACE_SIZE = 110                // 110x110x110 units
 export const SHIP_RADIUS = 3.0                    // collision radius
 
-// Asteroid drift speed (units/s). Spawned rocks head roughly toward the ship.
-export const ASTEROID_MIN_SPEED = 11
-export const ASTEROID_MAX_SPEED = 20
+// Asteroid drift speed (units/s). Rocks drift mostly randomly with a slight
+// inward bias so the field slowly closes in without being an instant death.
+export const ASTEROID_MIN_SPEED = 9
+export const ASTEROID_MAX_SPEED = 16
 
 // --- Enemy saucers (classic Asteroids UFOs) ---
 export const SCORE_SAUCER_LARGE = 200
@@ -42,16 +43,18 @@ export const SCORE_SAUCER_SMALL = 1000
 export const SAUCER_LARGE_RADIUS = 5.5
 export const SAUCER_SMALL_RADIUS = 3.0
 
-// The big, easy saucer appears first; if you dawdle the small, aggressive one
-// shows up and everything escalates.
-export const SAUCER_LARGE_DELAY = 10              // seconds into a wave
-export const SAUCER_SMALL_DELAY = 26              // seconds into a wave
+// One large saucer appears about midway through a wave (slow + easy). A small
+// saucer only shows up if you take a long time, and repeats if you keep
+// stalling. Never more than one at a time.
+export const SAUCER_LARGE_DELAY = 22              // seconds into a wave (~midway)
+export const SAUCER_SMALL_DELAY = 46              // seconds into a wave
+export const SAUCER_SMALL_REPEAT = 34             // seconds between repeat smalls
 export const MAX_SAUCERS = 1
 
 // Movement speeds (units/s). Large is a slow, easy target; small is nimbler.
-export const SAUCER_LARGE_SPEED = 12
-export const SAUCER_SMALL_SPEED_MIN = 20
-export const SAUCER_SMALL_SPEED_MAX = 30
+export const SAUCER_LARGE_SPEED = 10
+export const SAUCER_SMALL_SPEED_MIN = 15
+export const SAUCER_SMALL_SPEED_MAX = 24
 
 // Enemy bullets
 export const ENEMY_BULLET_SPEED_LARGE = 34

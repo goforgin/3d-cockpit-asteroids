@@ -3,8 +3,10 @@ import { getRadarBlips } from '../../game/radar'
 import { PLAY_SPACE_SIZE } from '../../game/constants'
 
 const WORLD_HALF_SIZE = PLAY_SPACE_SIZE / 2
-const RADAR_SIZE = 120
+const RADAR_SIZE = 200
 const CENTER = RADAR_SIZE / 2
+const RING_OUTER = RADAR_SIZE / 2
+const RING_INNER = RADAR_SIZE / 4
 
 // Blip sizes
 const BLIP_SIZES = {
@@ -58,19 +60,19 @@ export const Radar = () => {
         <div
           className="absolute border border-green-500/20 rounded-full pointer-events-none z-10"
           style={{
-            left: CENTER - 30,
-            top: CENTER - 30,
-            width: 60,
-            height: 60,
+            left: CENTER - RING_INNER,
+            top: CENTER - RING_INNER,
+            width: RING_INNER * 2,
+            height: RING_INNER * 2,
           }}
         />
         <div
           className="absolute border border-green-500/20 rounded-full pointer-events-none z-10"
           style={{
-            left: CENTER - 60,
-            top: CENTER - 60,
-            width: 120,
-            height: 120,
+            left: CENTER - RING_OUTER,
+            top: CENTER - RING_OUTER,
+            width: RING_OUTER * 2,
+            height: RING_OUTER * 2,
           }}
         />
         
@@ -78,9 +80,9 @@ export const Radar = () => {
         <div
           className="absolute border border-green-500/20 pointer-events-none z-10"
           style={{
-            left: CENTER - 60,
+            left: 0,
             top: CENTER - 1,
-            width: 120,
+            width: RADAR_SIZE,
             height: 2,
           }}
         />
@@ -88,9 +90,9 @@ export const Radar = () => {
           className="absolute border border-green-500/20 pointer-events-none z-10"
           style={{
             left: CENTER - 1,
-            top: CENTER - 60,
+            top: 0,
             width: 2,
-            height: 120,
+            height: RADAR_SIZE,
           }}
         />
         

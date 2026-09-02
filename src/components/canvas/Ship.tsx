@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useGameStore } from '../../store/gameStore'
 import * as THREE from 'three'
+import { CockpitConsole } from './CockpitConsole'
 
 export const Ship = () => {
   const cockpitRef = useRef<THREE.Group>(null!)
@@ -40,20 +41,13 @@ export const Ship = () => {
       {/* Inner group flips the cockpit so the canopy/window faces forward (-Z),
           which is the direction the camera looks. */}
       <group rotation={[0, Math.PI, 0]}>
-      {/* Dashboard - dark metal below view */}
-      <mesh position={[0, -0.8, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <boxGeometry args={[2.5, 0.1, 1.5]} />
-        <meshStandardMaterial color="#2a2a2a" roughness={0.35} metalness={0.7} />
-      </mesh>
-      
-      {/* Dashboard accents - emissive cyan/green */}
-      <mesh position={[-0.5, -0.75, 0.2]} rotation={[-Math.PI / 2, 0, 0]}>
-        <boxGeometry args={[0.8, 0.05, 0.1]} />
-        <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={0.3} roughness={0.2} metalness={0.8} />
-      </mesh>
-      <mesh position={[0.5, -0.75, 0.2]} rotation={[-Math.PI / 2, 0, 0]}>
-        <boxGeometry args={[0.8, 0.05, 0.1]} />
-        <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.3} roughness={0.2} metalness={0.8} />
+      {/* Detailed control console (dashboard, MFDs, buttons, gauges, throttle) */}
+      <CockpitConsole />
+
+      {/* Dashboard base - dark metal below view */}
+      <mesh position={[0, -0.9, 0.1]} rotation={[-Math.PI / 2, 0, 0]}>
+        <boxGeometry args={[2.6, 1.1, 0.1]} />
+        <meshStandardMaterial color="#202226" roughness={0.5} metalness={0.7} />
       </mesh>
       
       {/* Left side frame strut */}

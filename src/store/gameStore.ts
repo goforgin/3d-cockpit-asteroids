@@ -31,7 +31,7 @@ interface GameStore {
   setEnemies: (enemies: EnemySaucer[]) => void
   setEnemyBullets: (bullets: EnemyBullet[]) => void
   addEnemyBullets: (bullets: EnemyBullet[]) => void
-  scheduleNextSaucer: (at: number) => void
+  scheduleNextSaucer: (at: number, largeUsed?: boolean) => void
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -60,6 +60,7 @@ export const useGameStore = create<GameStore>((set) => ({
     shipHitAt: 0,
     waveStartTime: 0,
     nextSaucerAt: 0,
+    largeSaucerUsed: false,
   },
 
   muted: false,
@@ -86,7 +87,8 @@ export const useGameStore = create<GameStore>((set) => ({
         velocity: { x: 0, y: 0, z: 0 },
         rotation: { yaw: 0, pitch: 0 },
         angularVelocity: { yaw: 0, pitch: 0 },
-        invulnerableUntil: 0,
+        // Brief grace period so you're not hit the instant the game starts.
+        invulnerableUntil: Date.now() + RESPAWN_INVULN * 1000,
         shieldActiveUntil: 0,
         shieldHitsLeft: 3,
         hyperspaceCooldownUntil: 0,
@@ -96,6 +98,7 @@ export const useGameStore = create<GameStore>((set) => ({
       shipHitAt: 0,
       waveStartTime: Date.now(),
       nextSaucerAt: Date.now() + SAUCER_LARGE_DELAY * 1000,
+      largeSaucerUsed: false,
     }
   }),
   
@@ -177,6 +180,7 @@ export const useGameStore = create<GameStore>((set) => ({
       enemyBullets: [],
       waveStartTime: Date.now(),
       nextSaucerAt: Date.now() + SAUCER_LARGE_DELAY * 1000,
+      largeSaucerUsed: false,
     }
   })),
   
@@ -295,8 +299,12 @@ export const useGameStore = create<GameStore>((set) => ({
     state: { ...state.state, enemyBullets: [...state.state.enemyBullets, ...bullets] }
   })),
 
-  scheduleNextSaucer: (at) => set((state) => ({
-    state: { ...state.state, nextSaucerAt: at }
+  scheduleNextSaucer: (at, largeUsed) => set((state) => ({
+    state: {
+      ...state.state,
+      nextSaucerAt: at,
+      largeSaucerUsed: largeUsed ?? state.state.largeSaucerUsed,
+    }
   })),
   
   spawnExplosion: (position) => set((state) => ({

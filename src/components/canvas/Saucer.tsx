@@ -73,8 +73,45 @@ export const Saucer = ({ type, position, radius }: SaucerProps) => {
 
       {/* Equatorial ring / bumper */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[radius * 0.98, radius * 0.1, 12, 32]} />
-        <meshStandardMaterial color="#2b2f33" metalness={0.8} roughness={0.4} />
+        <torusGeometry args={[radius * 0.98, radius * 0.1, 16, 48]} />
+        <meshStandardMaterial color="#2b2f33" metalness={0.85} roughness={0.35} />
+      </mesh>
+
+      {/* Panel seam rings for surface detail */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[radius * 0.62, radius * 0.02, 8, 40]} />
+        <meshStandardMaterial color="#15181b" metalness={0.7} roughness={0.5} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[radius * 0.34, radius * 0.02, 8, 32]} />
+        <meshStandardMaterial color="#15181b" metalness={0.7} roughness={0.5} />
+      </mesh>
+
+      {/* Lower hull pod (classic saucer under-bump) */}
+      <mesh position={[0, -radius * 0.22, 0]} scale={[1, 0.6, 1]}>
+        <sphereGeometry args={[radius * 0.55, 20, 14]} />
+        <meshStandardMaterial color={hull} metalness={0.9} roughness={0.32} />
+      </mesh>
+
+      {/* Glowing engine ring on the underside */}
+      <mesh position={[0, -radius * 0.34, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[radius * 0.4, radius * 0.05, 12, 32]} />
+        <meshStandardMaterial
+          color={accent}
+          emissive={new THREE.Color(accent)}
+          emissiveIntensity={1.6}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* Top antenna */}
+      <mesh position={[0, radius * 0.55, 0]}>
+        <cylinderGeometry args={[radius * 0.02, radius * 0.02, radius * 0.5, 8]} />
+        <meshStandardMaterial color="#8a9299" metalness={0.9} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, radius * 0.82, 0]}>
+        <sphereGeometry args={[radius * 0.07, 10, 10]} />
+        <meshStandardMaterial color={accent} emissive={new THREE.Color(accent)} emissiveIntensity={2} toneMapped={false} />
       </mesh>
 
       {/* Cockpit dome */}
