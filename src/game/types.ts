@@ -75,7 +75,7 @@ export interface Explosion {
   position: Vector3
   particles: ExplosionParticle[]
   createdAt: number
-  kind?: 'rock' | 'ship'
+  kind?: 'rock' | 'ship' | 'saucer' | 'dust'
   duration?: number // ms before culled (defaults to 600)
 }
 

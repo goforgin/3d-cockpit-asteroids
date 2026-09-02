@@ -151,12 +151,17 @@ export const useGameSimulation = () => {
         const rock = preFire.asteroids.find((a) => a.id === lockId)
         const saucer = preFire.enemies.find((e) => e.id === lockId)
         if (rock) {
-          useGameStore.getState().spawnExplosion(rock.position)
+          // Rock: spawn rock burst (large/medium) or dust cloud (small)
+          if (rock.type === 'small') {
+            useGameStore.getState().spawnDustCloud(rock.position)
+          } else {
+            useGameStore.getState().spawnExplosion(rock.position)
+          }
           useGameStore.getState().addScore(scoreForType(rock.type))
           useGameStore.getState().removeAsteroidAndSplit(rock.id)
           audioManager.playExplosion()
         } else if (saucer) {
-          useGameStore.getState().spawnExplosion(saucer.position)
+          useGameStore.getState().spawnSaucerExplosion(saucer.position)
           useGameStore.getState().addScore(
             saucer.type === 'large' ? SCORE_SAUCER_LARGE : SCORE_SAUCER_SMALL
           )
@@ -268,7 +273,7 @@ export const useGameSimulation = () => {
             wrappedDistance(laser.position, enemy.position, PLAY_SPACE_SIZE) <
             enemy.radius + 1
           ) {
-            useGameStore.getState().spawnExplosion(enemy.position)
+            useGameStore.getState().spawnSaucerExplosion(enemy.position)
             audioManager.playExplosion()
             useGameStore.getState().addScore(
               enemy.type === 'large' ? SCORE_SAUCER_LARGE : SCORE_SAUCER_SMALL
@@ -292,8 +297,12 @@ export const useGameSimulation = () => {
     for (const laser of lasers) {
       for (const asteroid of asteroids) {
         if (checkLaserAsteroidCollision(laser, asteroid)) {
-          // Spawn explosion at asteroid position
-          useGameStore.getState().spawnExplosion(asteroid.position)
+          // Spawn correct explosion at asteroid position
+          if (asteroid.type === 'small') {
+            useGameStore.getState().spawnDustCloud(asteroid.position)
+          } else {
+            useGameStore.getState().spawnExplosion(asteroid.position)
+          }
           // Play explosion sound
           audioManager.playExplosion()
           

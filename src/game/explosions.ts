@@ -6,7 +6,7 @@ interface ExplosionOptions {
   maxSpeed?: number
   minLife?: number
   maxLife?: number
-  kind?: 'rock' | 'ship'
+  kind?: 'rock' | 'ship' | 'saucer' | 'dust'
   duration?: number // ms the explosion is drawn before it's culled
 }
 
@@ -55,6 +55,30 @@ const buildExplosion = (position: Vector3, opts: ExplosionOptions = {}): Explosi
 // Standard rock-shatter burst.
 export const spawnExplosion = (position: Vector3): Explosion =>
   buildExplosion(position, { count: 34, minSpeed: 6, maxSpeed: 20, duration: 700 })
+
+// Saucer explosion: fireball + metal sparks
+export const spawnSaucerExplosion = (position: Vector3): Explosion =>
+  buildExplosion(position, {
+    count: 62,
+    minSpeed: 8,
+    maxSpeed: 28,
+    minLife: 0.5,
+    maxLife: 1.0,
+    kind: 'saucer',
+    duration: 1100,
+  })
+
+// Small asteroid dust cloud: slow puff of debris
+export const spawnDustCloud = (position: Vector3): Explosion =>
+  buildExplosion(position, {
+    count: 90,
+    minSpeed: 2,
+    maxSpeed: 9,
+    minLife: 0.6,
+    maxLife: 1.2,
+    kind: 'dust',
+    duration: 1200,
+  })
 
 // Bigger, fierier, longer-lived burst for the player's ship being destroyed.
 export const spawnShipExplosion = (position: Vector3): Explosion =>

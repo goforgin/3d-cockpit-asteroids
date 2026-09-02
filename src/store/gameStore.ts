@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { GameState, EnemySaucer, EnemyBullet } from '../game/types'
 import { generateWave } from '../game/waves'
 import { destroyAsteroid } from '../game/asteroids'
-import { spawnExplosion as buildExplosion } from '../game/explosions'
+import { spawnExplosion, spawnSaucerExplosion, spawnDustCloud } from '../game/explosions'
 import { RESPAWN_INVULN, SCORE_BONUS_SHIP, FIRE_RATE, LASER_SPEED, MAX_LASERS, LASER_LIFETIME, SHIELD_HITS_PER_SHIP, SAUCER_LARGE_DELAY } from '../game/constants'
 import { audioManager } from '../audio/audioManager'
 import { getForwardVector } from '../game/shipPhysics'
@@ -25,6 +25,8 @@ interface GameStore {
   updateLasers: (lasers: GameState['lasers']) => void
   updateExplosions: (explosions: GameState['explosions']) => void
   spawnExplosion: (position: { x: number; y: number; z: number }) => void
+  spawnSaucerExplosion: (position: { x: number; y: number; z: number }) => void
+  spawnDustCloud: (position: { x: number; y: number; z: number }) => void
   removeAsteroidAndSplit: (id: string) => void
   tryFireLaser: () => void
   setLockedTarget: (id: string | null) => void
@@ -282,6 +284,20 @@ export const useGameStore = create<GameStore>((set) => ({
     state: { ...state.state, explosions }
   })),
 
+  spawnSaucerExplosion: (position) => set((state) => ({
+    state: {
+      ...state.state,
+      explosions: [...state.state.explosions, spawnSaucerExplosion(position)],
+    }
+  })),
+
+  spawnDustCloud: (position) => set((state) => ({
+    state: {
+      ...state.state,
+      explosions: [...state.state.explosions, spawnDustCloud(position)],
+    }
+  })),
+
   setEnemies: (enemies) => set((state) => ({
     state: { ...state.state, enemies }
   })),
@@ -305,7 +321,7 @@ export const useGameStore = create<GameStore>((set) => ({
   spawnExplosion: (position) => set((state) => ({
     state: {
       ...state.state,
-      explosions: [...state.state.explosions, buildExplosion(position)],
+      explosions: [...state.state.explosions, spawnExplosion(position)],
     }
   })),
   
