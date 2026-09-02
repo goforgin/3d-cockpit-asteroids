@@ -19,7 +19,9 @@ const scoreForType = (type: 'large' | 'medium' | 'small'): number =>
   type === 'large' ? SCORE_LARGE : type === 'medium' ? SCORE_MEDIUM : SCORE_SMALL
 
 export const useGameSimulation = () => {
-  const simulationTick = useCallback((deltaTime: number) => {
+  const simulationTick = useCallback((rawDelta: number) => {
+    const deltaTime = Math.min(Math.max(rawDelta, 0), 0.05)
+
     // Update input manager first
     inputManager.update(deltaTime)
     

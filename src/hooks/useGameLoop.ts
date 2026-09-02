@@ -6,7 +6,9 @@ export const useGameLoop = (callback: (deltaTime: number) => void, enabled: bool
   
   const animate = (time: number) => {
     if (previousTimeRef.current !== undefined) {
-      const deltaTime = (time - previousTimeRef.current) / 1000
+      // Clamp so a tab-switch / first frame after start can't teleport rocks
+      // through the ship in a single tick.
+      const deltaTime = Math.min((time - previousTimeRef.current) / 1000, 0.05)
       callback(deltaTime)
     }
     previousTimeRef.current = time

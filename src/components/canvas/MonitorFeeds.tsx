@@ -59,9 +59,13 @@ export const MonitorFeeds = () => {
     const feeds = feedsRef.current
     if (!feeds) return
     if (useGameStore.getState().state.gameState !== 'playing') return
+    const gs = useGameStore.getState().state
     // Skip aux cameras during the death flash — additive debris at the camera
     // is what turned the whole screen white on ship destroy.
-    if (Date.now() < useGameStore.getState().state.shipHitAt + 1600) return
+    if (Date.now() < gs.shipHitAt + 1600) return
+    // Also skip while a burst is on screen so additive particles never leak
+    // into the offscreen gl.render() path.
+    if (gs.explosions.length > 0) return
 
     const { gl, scene } = state
     const ship = useGameStore.getState().state.ship
@@ -116,6 +120,10 @@ export const MonitorFeeds = () => {
       gl.setViewport(0, 0, gl.domElement.width, gl.domElement.height)
       gl.setScissorTest(false)
       gl.resetState()
+      const ctx = gl.getContext()
+      ctx.disable(ctx.BLEND)
+      ctx.blendFunc(ctx.SRC_ALPHA, ctx.ONE_MINUS_SRC_ALPHA)
+      ctx.blendEquation(ctx.FUNC_ADD)
 
       if (cockpit) cockpit.visible = true
       if (lock) lock.visible = true

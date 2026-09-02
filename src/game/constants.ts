@@ -22,7 +22,8 @@ export const MAX_LASERS = 4                       // max active lasers
 export const SHIELD_HITS_PER_SHIP = 3             // total hits absorbed per life
 export const SHIELD_DURATION = 2.0                // seconds active per Z press
 export const HYPERSPACE_COOLDOWN = 5.0            // seconds
-export const RESPAWN_INVULN = 3.0                 // seconds
+export const RESPAWN_INVULN = 3.0                 // seconds after losing a life
+export const START_INVULN = 4.5                   // seconds of grace at a fresh start
 
 // Play space
 // Compact toroidal cube: rocks are always close and constantly wrap through the

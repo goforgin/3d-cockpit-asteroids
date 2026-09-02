@@ -3,7 +3,7 @@ import { GameState, EnemySaucer, EnemyBullet } from '../game/types'
 import { generateWave } from '../game/waves'
 import { destroyAsteroid } from '../game/asteroids'
 import { spawnExplosion, spawnSaucerExplosion, spawnDustCloud } from '../game/explosions'
-import { RESPAWN_INVULN, SCORE_BONUS_SHIP, FIRE_RATE, LASER_SPEED, MAX_LASERS, LASER_LIFETIME, SHIELD_HITS_PER_SHIP, SAUCER_LARGE_DELAY } from '../game/constants'
+import { RESPAWN_INVULN, START_INVULN, SCORE_BONUS_SHIP, FIRE_RATE, LASER_SPEED, MAX_LASERS, LASER_LIFETIME, SHIELD_HITS_PER_SHIP, SAUCER_LARGE_DELAY } from '../game/constants'
 import { audioManager } from '../audio/audioManager'
 import { getForwardVector } from '../game/shipPhysics'
 
@@ -89,8 +89,8 @@ export const useGameStore = create<GameStore>((set) => ({
         velocity: { x: 0, y: 0, z: 0 },
         rotation: { yaw: 0, pitch: 0 },
         angularVelocity: { yaw: 0, pitch: 0 },
-        // Brief grace period so you're not hit the instant the game starts.
-        invulnerableUntil: Date.now() + RESPAWN_INVULN * 1000,
+        // Opening grace so inbound rocks can't land a hit before you can steer.
+        invulnerableUntil: Date.now() + START_INVULN * 1000,
         shieldActiveUntil: 0,
         shieldHitsLeft: 3,
         hyperspaceCooldownUntil: 0,

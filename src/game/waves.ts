@@ -1,7 +1,7 @@
 // Wave generation logic
 
 import { Vector3 } from './types'
-import { randomRange, randomOnSphere } from './math'
+import { randomRange, randomOnSphere, vectorCross, vectorNormalize } from './math'
 import {
   ASTEROID_LARGE_RADIUS,
   ASTEROID_MIN_SPEED,
@@ -34,22 +34,45 @@ export const generateWave = (waveNumber: number): SpawnedAsteroid[] => {
   const half = PLAY_SPACE_SIZE / 2
 
   for (let i = 0; i < count; i++) {
-    // Spawn out near the edges of the zone (well away from the ship at origin).
-    const spawnRadius = randomRange(half * 0.72, half * 0.96)
-    const position = randomOnSphere(spawnRadius)
+    // Spawn out near the edges so nothing is sitting on the cockpit.
+    const spawnRadius = randomRange(half * 0.84, half * 0.98)
+    let position = randomOnSphere(spawnRadius)
 
-    // Head mostly toward the origin (ship spawn) so sitting still is dangerous.
-    const speed = randomRange(ASTEROID_MIN_SPEED, ASTEROID_MAX_SPEED)
-    const inward = {
-      x: -position.x / spawnRadius,
-      y: -position.y / spawnRadius,
-      z: -position.z / spawnRadius,
+    // Wave 1: camera looks down -Z. Flip anything in the forward hemisphere
+    // behind the ship so a rock isn't filling the windshield on the first frame.
+    if (waveNumber === 1 && position.z < 10) {
+      position = { ...position, z: Math.abs(position.z) + 14 }
+      const mag = Math.sqrt(position.x ** 2 + position.y ** 2 + position.z ** 2) || 1
+      position = {
+        x: (position.x / mag) * spawnRadius,
+        y: (position.y / mag) * spawnRadius,
+        z: (position.z / mag) * spawnRadius,
+      }
     }
-    const jitter = randomOnSphere(1)
+
+    const inward = vectorNormalize({
+      x: -position.x,
+      y: -position.y,
+      z: -position.z,
+    })
+    const helper = Math.abs(inward.y) < 0.9
+      ? { x: 0, y: 1, z: 0 }
+      : { x: 1, y: 0, z: 0 }
+    const tangent = vectorNormalize(vectorCross(inward, helper))
+
+    // Mostly orbit so rocks close over several seconds instead of ramming spawn.
+    // Later waves pull inward harder so sitting still is still dangerous.
+    const inboundMix = waveNumber === 1 ? 0.18 : 0.42
+    const dir = vectorNormalize({
+      x: tangent.x * (1 - inboundMix) + inward.x * inboundMix,
+      y: tangent.y * (1 - inboundMix) + inward.y * inboundMix,
+      z: tangent.z * (1 - inboundMix) + inward.z * inboundMix,
+    })
+    const speed = randomRange(ASTEROID_MIN_SPEED, ASTEROID_MAX_SPEED)
     const velocity = {
-      x: (inward.x * 0.78 + jitter.x * 0.22) * speed,
-      y: (inward.y * 0.78 + jitter.y * 0.22) * speed,
-      z: (inward.z * 0.78 + jitter.z * 0.22) * speed,
+      x: dir.x * speed,
+      y: dir.y * speed,
+      z: dir.z * speed,
     }
 
     asteroids.push({
