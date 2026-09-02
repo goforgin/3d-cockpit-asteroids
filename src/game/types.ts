@@ -63,11 +63,18 @@ export interface EnemyBullet {
   fromSmall: boolean  // small-saucer bullets look/behave nastier
 }
 
+export type ExplosionLayer = 'spark' | 'puff'
+
 export interface ExplosionParticle {
   position: Vector3
   velocity: Vector3
   lifetime: number
   maxLifetime: number
+  size: number
+  grow: number
+  drag: number
+  spin: number
+  layer: ExplosionLayer
 }
 
 export interface Explosion {

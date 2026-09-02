@@ -1,55 +1,96 @@
-import { Explosion, Vector3 } from './types'
+import { Explosion, ExplosionLayer, Vector3 } from './types'
 
 interface ExplosionOptions {
-  count?: number
-  minSpeed?: number
-  maxSpeed?: number
-  minLife?: number
-  maxLife?: number
   kind?: 'rock' | 'ship' | 'saucer' | 'dust'
-  duration?: number // ms the explosion is drawn before it's culled
-  initialSpread?: number // spawn particles already offset from center
+  duration?: number
+  sparks?: number
+  puffs?: number
 }
 
-// Particle positions are stored RELATIVE to the explosion center (which starts
-// at {0,0,0} and drifts outward), so the renderer can place the whole burst at
-// any world/screen position it likes.
+const dirOnSphere = (): Vector3 => {
+  const theta = Math.random() * Math.PI * 2
+  const phi = Math.acos(Math.random() * 2 - 1)
+  return {
+    x: Math.sin(phi) * Math.cos(theta),
+    y: Math.sin(phi) * Math.sin(theta),
+    z: Math.cos(phi),
+  }
+}
+
+const particle = (
+  dir: Vector3,
+  layer: ExplosionLayer,
+  opts: {
+    speed: number
+    spread: number
+    size: number
+    grow: number
+    life: number
+    drag: number
+    spin: number
+  }
+) => {
+  const spawnR = opts.spread * Math.random()
+  return {
+    position: {
+      x: dir.x * spawnR,
+      y: dir.y * spawnR,
+      z: dir.z * spawnR,
+    },
+    velocity: {
+      x: dir.x * opts.speed,
+      y: dir.y * opts.speed,
+      z: dir.z * opts.speed,
+    },
+    lifetime: 0,
+    maxLifetime: opts.life,
+    size: opts.size,
+    grow: opts.grow,
+    drag: opts.drag,
+    spin: opts.spin,
+    layer,
+  }
+}
+
 const buildExplosion = (position: Vector3, opts: ExplosionOptions = {}): Explosion => {
   const {
-    count = 30,
-    minSpeed = 5,
-    maxSpeed = 15,
-    minLife = 0.5,
-    maxLife = 0.8,
     kind = 'rock',
-    duration = 700,
-    initialSpread = 0,
+    duration = 900,
+    sparks = 16,
+    puffs = 12,
   } = opts
 
   const particles = []
-  for (let i = 0; i < count; i++) {
-    const theta = Math.random() * Math.PI * 2
-    const phi = Math.acos(Math.random() * 2 - 1)
-    const dirX = Math.sin(phi) * Math.cos(theta)
-    const dirY = Math.sin(phi) * Math.sin(theta)
-    const dirZ = Math.cos(phi)
-    const speed = Math.random() * (maxSpeed - minSpeed) + minSpeed
-    const spawnR = initialSpread * Math.random()
 
-    particles.push({
-      position: {
-        x: dirX * spawnR,
-        y: dirY * spawnR,
-        z: dirZ * spawnR,
-      },
-      velocity: {
-        x: dirX * speed,
-        y: dirY * speed,
-        z: dirZ * speed,
-      },
-      lifetime: 0,
-      maxLifetime: minLife + Math.random() * (maxLife - minLife),
-    })
+  for (let i = 0; i < sparks; i++) {
+    const dir = dirOnSphere()
+    particles.push(
+      particle(dir, 'spark', {
+        speed: (kind === 'dust' ? 3 : 10) + Math.random() * (kind === 'dust' ? 4 : 16),
+        spread: kind === 'dust' ? 0.4 : 0.6,
+        size: (kind === 'dust' ? 0.25 : 0.45) + Math.random() * 0.5,
+        grow: kind === 'dust' ? -0.05 : -0.12,
+        life: 0.35 + Math.random() * 0.45,
+        drag: 1.8 + Math.random(),
+        spin: (Math.random() - 0.5) * 8,
+      })
+    )
+  }
+
+  for (let i = 0; i < puffs; i++) {
+    const dir = dirOnSphere()
+    const dusty = kind === 'dust'
+    particles.push(
+      particle(dir, 'puff', {
+        speed: (dusty ? 1.1 : 2.2) + Math.random() * (dusty ? 3.2 : 5.5),
+        spread: dusty ? 1.1 : 0.8,
+        size: (dusty ? 2.0 : 1.2) + Math.random() * (dusty ? 2.2 : 1.6),
+        grow: (dusty ? 3.2 : 2.0) + Math.random() * 1.6,
+        life: (dusty ? 0.9 : 0.7) + Math.random() * (dusty ? 0.8 : 0.55),
+        drag: dusty ? 2.4 : 1.6,
+        spin: (Math.random() - 0.5) * 2.5,
+      })
+    )
   }
 
   return {
@@ -62,45 +103,34 @@ const buildExplosion = (position: Vector3, opts: ExplosionOptions = {}): Explosi
   }
 }
 
-// Standard rock-shatter burst.
 export const spawnExplosion = (position: Vector3): Explosion =>
-  buildExplosion(position, { count: 34, minSpeed: 6, maxSpeed: 20, duration: 700 })
+  buildExplosion(position, {
+    kind: 'rock',
+    duration: 1100,
+    sparks: 18,
+    puffs: 14,
+  })
 
-// Saucer burst. Keep the mote count modest — hundreds of overlapping additive
-// sprites plus bloom previously locked the framebuffer white.
 export const spawnSaucerExplosion = (position: Vector3): Explosion =>
   buildExplosion(position, {
-    count: 48,
-    minSpeed: 8,
-    maxSpeed: 22,
-    minLife: 0.5,
-    maxLife: 0.95,
     kind: 'saucer',
-    duration: 1100,
-    initialSpread: 1.6,
+    duration: 1400,
+    sparks: 22,
+    puffs: 16,
   })
 
-// Small asteroid dust cloud: slow puff of debris
 export const spawnDustCloud = (position: Vector3): Explosion =>
   buildExplosion(position, {
-    count: 70,
-    minSpeed: 1.2,
-    maxSpeed: 5.5,
-    minLife: 0.6,
-    maxLife: 1.2,
     kind: 'dust',
-    duration: 1200,
-    initialSpread: 1.2,
+    duration: 1700,
+    sparks: 8,
+    puffs: 22,
   })
 
-// Bigger, fierier, longer-lived burst for the player's ship being destroyed.
 export const spawnShipExplosion = (position: Vector3): Explosion =>
   buildExplosion(position, {
-    count: 90,
-    minSpeed: 10,
-    maxSpeed: 42,
-    minLife: 0.7,
-    maxLife: 1.4,
     kind: 'ship',
     duration: 1500,
+    sparks: 20,
+    puffs: 14,
   })
