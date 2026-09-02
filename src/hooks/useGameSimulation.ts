@@ -73,7 +73,7 @@ export const useGameSimulation = () => {
     const waveElapsed = (now - state.waveStartTime) / 1000
 
     // Move + fire existing saucers.
-    const enemyUpdate = updateEnemies(state.enemies, newShip.position, deltaTime, now, waveElapsed)
+    const enemyUpdate = updateEnemies(state.enemies, { position: newShip.position, yaw: newShip.rotation.yaw, pitch: newShip.rotation.pitch }, deltaTime, now, waveElapsed)
     useGameStore.getState().setEnemies(enemyUpdate.enemies)
     if (enemyUpdate.newBullets.length > 0) {
       useGameStore.getState().addEnemyBullets(enemyUpdate.newBullets)

@@ -1,13 +1,134 @@
 import { Radar } from './Radar'
 import { useGameStore } from '../../store/gameStore'
 import { SHIELD_HITS_PER_SHIP } from '../../game/constants'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
+import * as THREE from 'three'
 
 // Fixed constants
 const RADAR_SIZE = 180
 const BOTTOM_INSET = 16
 const DASH_PAD = 16
 const DASH_HEIGHT = BOTTOM_INSET + RADAR_SIZE + DASH_PAD
+
+// Monitor dimensions
+const MONITOR_WIDTH = 140
+const MONITOR_HEIGHT = 90
+
+// Camera monitor component - renders 4 views of the world
+const CameraMonitor = ({
+  label,
+  yawOffset,
+  worldScene,
+  shipPosition,
+  shipYaw,
+  shipPitch,
+}: {
+  label: string
+  yawOffset: number
+  worldScene: THREE.Scene
+  shipPosition: { x: number; y: number; z: number }
+  shipYaw: number
+  shipPitch: number
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const rtRef = useRef<THREE.WebGLRenderTarget | null>(null)
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
+  const tempEuler = useRef(new THREE.Euler())
+
+  // Create camera and render target once
+  useEffect(() => {
+    const camera = new THREE.PerspectiveCamera(65, MONITOR_WIDTH / MONITOR_HEIGHT, 0.5, 5000)
+    camera.rotation.order = 'YXZ'
+    cameraRef.current = camera
+
+    const rt = new THREE.WebGLRenderTarget(MONITOR_WIDTH, MONITOR_HEIGHT)
+    rtRef.current = rt
+
+    return () => {
+      rt.dispose()
+    }
+  }, [])
+
+  // Render each frame
+  useFrame((state) => {
+    if (!rtRef.current || !cameraRef.current || !canvasRef.current) return
+
+    const camera = cameraRef.current
+    const rt = rtRef.current
+
+    // Set camera position and rotation
+    camera.position.set(shipPosition.x, shipPosition.y, shipPosition.z)
+    tempEuler.current.set(shipPitch, shipYaw + yawOffset, 0, 'YXZ')
+    camera.quaternion.setFromEuler(tempEuler.current)
+
+    // Render world scene to render target
+    state.gl.setRenderTarget(rt)
+    state.gl.render(worldScene, camera)
+    state.gl.setRenderTarget(null)
+
+    // Blit to canvas
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      // Get the rendered texture
+      const texture = rt.texture
+      if (texture) {
+        // Create a temporary canvas to flip Y (Three.js renders upside down)
+        const tempCanvas = document.createElement('canvas')
+        tempCanvas.width = MONITOR_WIDTH
+        tempCanvas.height = MONITOR_HEIGHT
+        const tempCtx = tempCanvas.getContext('2d')
+        if (tempCtx && texture.image) {
+          tempCtx.drawImage(texture.image as HTMLImageElement, 0, 0)
+          // Flip vertically and draw to main canvas
+          ctx.save()
+          ctx.translate(0, MONITOR_HEIGHT)
+          ctx.scale(1, -1)
+          ctx.drawImage(tempCanvas, 0, 0)
+          ctx.restore()
+        }
+      }
+    }
+  })
+
+  return (
+    <div className="flex flex-col items-center space-y-1">
+      {/* Monitor bezel */}
+      <div
+        className="relative rounded-sm border border-cyan-700/50 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] overflow-hidden"
+        style={{
+          width: MONITOR_WIDTH,
+          height: MONITOR_HEIGHT,
+          backgroundColor: '#0a0a0a',
+        }}
+      >
+        {/* Video canvas */}
+        <canvas
+          ref={canvasRef}
+          width={MONITOR_WIDTH}
+          height={MONITOR_HEIGHT}
+          className="w-full h-full"
+        />
+        {/* CRT scanline overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0%, transparent 50%, rgba(0,255,136,0.05) 50%, rgba(0,255,136,0.05) 52%)',
+            backgroundSize: '100% 4px',
+          }}
+        />
+      </div>
+      {/* Label */}
+      <div
+        className="text-[10px] tracking-widest text-cyan-400/80"
+        style={{ fontFamily: "'Orbitron', monospace" }}
+      >
+        {label}
+      </div>
+    </div>
+  )
+}
 
 // Shield pips component (inline for right cluster)
 const ShieldPips = () => {
@@ -242,47 +363,170 @@ const RightControls = () => (
   </div>
 )
 
-export const CockpitDash = () => (
-  <div
-    className="pointer-events-none"
-    style={{
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: DASH_HEIGHT,
-      background: 'linear-gradient(180deg, #5a6068 0%, #2a2e34 18%, #1a1d22 100%)',
-      borderTop: '2px solid #7a8088',
-      boxShadow: 'inset 0 8px 16px rgba(0,0,0,0.45)',
-    }}
-  >
-    {/* Thin highlight line at top edge */}
-    <div
-      className="absolute top-0 left-0 right-0 h-px"
-      style={{ backgroundColor: '#8a9098' }}
-    />
+export const CockpitDash = () => {
+  const gameState = useGameStore((state) => state.state.gameState)
+  const ship = useGameStore((state) => state.state.ship)
+  const { asteroids, enemies } = useGameStore((state) => ({
+    asteroids: state.state.asteroids,
+    enemies: state.state.enemies,
+  }))
+
+  // Create world scene (without cockpit, HUD, postprocessing)
+  const worldSceneRef = useRef<THREE.Scene | null>(null)
+  
+  // Build world scene once
+  useEffect(() => {
+    const scene = new THREE.Scene()
     
-    {/* Inner row with controls */}
+    // Stars
+    const starsGeometry = new THREE.BufferGeometry()
+    const starsPositions = new Float32Array(10000 * 3)
+    for (let i = 0; i < 10000; i++) {
+      const r = 200 + Math.random() * 200
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.random() * Math.PI
+      starsPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
+      starsPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
+      starsPositions[i * 3 + 2] = r * Math.cos(phi)
+    }
+    starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3))
+    const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: true })
+    const stars = new THREE.Points(starsGeometry, starsMaterial)
+    scene.add(stars)
+    
+    // Asteroids - use random colors based on type
+    asteroids.forEach((asteroid) => {
+      const geometry = new THREE.IcosahedronGeometry(asteroid.radius, 0)
+      const color = asteroid.type === 'large' ? 0x888888 : asteroid.type === 'medium' ? 0x666666 : 0x555555
+      const material = new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: 0.9,
+        metalness: 0.2,
+      })
+      const mesh = new THREE.Mesh(geometry, material)
+      mesh.position.set(asteroid.position.x, asteroid.position.y, asteroid.position.z)
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0)
+      scene.add(mesh)
+    })
+    
+    // Enemies (saucers)
+    enemies.forEach((enemy) => {
+      const geometry = new THREE.ConeGeometry(enemy.radius, enemy.radius * 1.5, 8)
+      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
+      const mesh = new THREE.Mesh(geometry, material)
+      mesh.position.set(enemy.position.x, enemy.position.y, enemy.position.z)
+      mesh.rotation.z = Math.PI / 2
+      scene.add(mesh)
+    })
+    
+    worldSceneRef.current = scene
+  }, [asteroids, enemies])
+
+  if (gameState !== 'playing' || !worldSceneRef.current) {
+    return (
+      <div
+        className="pointer-events-none"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: DASH_HEIGHT,
+          background: 'linear-gradient(180deg, #5a6068 0%, #2a2e34 18%, #1a1d22 100%)',
+          borderTop: '2px solid #7a8088',
+          boxShadow: 'inset 0 8px 16px rgba(0,0,0,0.45)',
+        }}
+      >
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ backgroundColor: '#8a9098' }}
+        />
+      </div>
+    )
+  }
+
+  return (
     <div
-      className="flex items-center justify-center h-full px-6"
+      className="pointer-events-none"
       style={{
-        background: 'linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.3) 100%)',
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: DASH_HEIGHT,
+        background: 'linear-gradient(180deg, #5a6068 0%, #2a2e34 18%, #1a1d22 100%)',
+        borderTop: '2px solid #7a8088',
+        boxShadow: 'inset 0 8px 16px rgba(0,0,0,0.45)',
       }}
     >
-      {/* Left cluster */}
-      <div className="flex items-center">
-        <LeftControls />
-      </div>
+      {/* Thin highlight line at top edge */}
+      <div
+        className="absolute top-0 left-0 right-0 h-px"
+        style={{ backgroundColor: '#8a9098' }}
+      />
       
-      {/* Radar (centered) */}
-      <div className="flex items-center">
-        <Radar />
-      </div>
-      
-      {/* Right cluster */}
-      <div className="flex items-center">
-        <RightControls />
+      {/* Full-width flex row with 7 cells */}
+      <div
+        className="flex items-center justify-between h-full px-4"
+        style={{
+          background: 'linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%)',
+        }}
+      >
+        {/* Left camera monitor */}
+        <CameraMonitor
+          label="LEFT"
+          yawOffset={-Math.PI / 2}
+          worldScene={worldSceneRef.current}
+          shipPosition={ship.position}
+          shipYaw={ship.rotation.yaw}
+          shipPitch={ship.rotation.pitch}
+        />
+        
+        {/* Front camera monitor */}
+        <CameraMonitor
+          label="FRONT"
+          yawOffset={0}
+          worldScene={worldSceneRef.current}
+          shipPosition={ship.position}
+          shipYaw={ship.rotation.yaw}
+          shipPitch={ship.rotation.pitch}
+        />
+        
+        {/* Left controls (COMM) */}
+        <div className="flex items-center">
+          <LeftControls />
+        </div>
+        
+        {/* Radar (centered) */}
+        <div className="flex items-center">
+          <Radar />
+        </div>
+        
+        {/* Right controls (SYSTEMS) */}
+        <div className="flex items-center">
+          <RightControls />
+        </div>
+        
+        {/* Back camera monitor */}
+        <CameraMonitor
+          label="BACK"
+          yawOffset={Math.PI}
+          worldScene={worldSceneRef.current}
+          shipPosition={ship.position}
+          shipYaw={ship.rotation.yaw}
+          shipPitch={ship.rotation.pitch}
+        />
+        
+        {/* Right camera monitor */}
+        <CameraMonitor
+          label="RIGHT"
+          yawOffset={Math.PI / 2}
+          worldScene={worldSceneRef.current}
+          shipPosition={ship.position}
+          shipYaw={ship.rotation.yaw}
+          shipPitch={ship.rotation.pitch}
+        />
       </div>
     </div>
-  </div>
-)
+  )
+}

@@ -5,6 +5,10 @@
 //    random directions. Big and easy, worth a few hundred points.
 //  - Small saucer: shows up if you dawdle, and gets progressively faster, more
 //    evasive, and more accurate the longer the wave drags on.
+//
+// NEW: Saucers fly in straight lines only. They change heading on schedule
+// but always move in a straight line between turns. Headings are axis-aligned
+// in the player's local horizontal frame (forward, backward, left, right).
 
 import { EnemySaucer, EnemyBullet, SaucerType, Vector3 } from './types'
 import { randomRange, randomOnSphere, wrapPosition, wrapDelta } from './math'
@@ -43,6 +47,28 @@ const toShipVector = (from: Vector3, ship: Vector3): Vector3 => ({
   z: wrapDelta(ship.z - from.z, PLAY_SPACE_SIZE),
 })
 
+// Get forward vector from yaw and pitch (same as shipPhysics)
+const getForwardVector = (yaw: number, pitch: number): Vector3 => {
+  // Simple approximation: forward is (cos(yaw)*cos(pitch), sin(pitch), sin(yaw)*cos(pitch))
+  const cosPitch = Math.cos(pitch)
+  return {
+    x: Math.cos(yaw) * cosPitch,
+    y: Math.sin(pitch),
+    z: Math.sin(yaw) * cosPitch,
+  }
+}
+
+// Get right vector (perpendicular to forward in horizontal plane)
+const getRightVector = (yaw: number, pitch: number): Vector3 => {
+  const cosPitch = Math.cos(pitch)
+  // Right is 90 degrees from forward in horizontal plane
+  return {
+    x: -Math.sin(yaw) * cosPitch,
+    y: 0,
+    z: Math.cos(yaw) * cosPitch,
+  }
+}
+
 export const spawnSaucer = (
   type: SaucerType,
   now: number,
@@ -58,61 +84,71 @@ export const spawnSaucer = (
       ? SAUCER_LARGE_SPEED
       : lerp(SAUCER_SMALL_SPEED_MIN, SAUCER_SMALL_SPEED_MAX, difficulty)
 
-  // Initially head roughly across the field (toward the far side).
-  const heading = norm({ x: -position.x, y: -position.y, z: -position.z })
+  // On spawn, pick +R or -R (cross the field in front), not a random sphere
+  // This ensures saucers enter from the sides and fly across the player's view
+  const heading = type === 'large' 
+    ? norm({ x: -position.x, y: -position.y, z: -position.z })
+    : { x: Math.random() > 0.5 ? 1 : -1, y: 0, z: 0 } // Simple horizontal movement
 
   return {
     id: `saucer-${type}-${now}-${Math.random().toString(36).slice(2, 8)}`,
     type,
     position,
-    velocity: { x: heading.x * speed, y: heading.y * speed, z: heading.z * speed },
+    velocity: { x: heading.x * speed, y: 0, z: heading.z * speed }, // Flat Y movement
     radius: type === 'large' ? SAUCER_LARGE_RADIUS : SAUCER_SMALL_RADIUS,
     spawnedAt: now,
-    nextTurnAt: now + (type === 'large' ? 1800 : 1100),
+    nextTurnAt: now + (type === 'large' ? 4000 : 3000), // Longer straight-line segments
     // Grace period before the saucer opens fire.
     nextFireAt: now + (type === 'large' ? 2800 : 2200),
   }
 }
 
 // Pick a new velocity for a saucer that's changing heading.
+// Saucers fly in straight lines with axis-aligned headings in player's local frame.
 const chooseVelocity = (
   saucer: EnemySaucer,
   ship: Vector3,
-  difficulty: number
+  difficulty: number,
+  shipYaw: number,
+  shipPitch: number
 ): Vector3 => {
-  if (saucer.type === 'large') {
-    // Mostly keep drifting, with a gentle random jog.
-    const jog = randomOnSphere(1)
-    const v = norm({
-      x: saucer.velocity.x + jog.x * 8,
-      y: saucer.velocity.y + jog.y * 8,
-      z: saucer.velocity.z + jog.z * 8,
-    })
-    return { x: v.x * SAUCER_LARGE_SPEED, y: v.y * SAUCER_LARGE_SPEED, z: v.z * SAUCER_LARGE_SPEED }
-  }
-
-  // Small saucer: strafe perpendicular to the player line (evasive) plus a bit
-  // of range-keeping so it hovers at a threatening mid distance.
   const toShip = toShipVector(saucer.position, ship)
-  const dist = mag(toShip)
   const toShipN = norm(toShip)
-  const rnd = randomOnSphere(1)
-  // Perpendicular component (cross product) => strafing motion.
-  const strafe = norm({
-    x: toShipN.y * rnd.z - toShipN.z * rnd.y,
-    y: toShipN.z * rnd.x - toShipN.x * rnd.z,
-    z: toShipN.x * rnd.y - toShipN.y * rnd.x,
-  })
-  // Keep a comfortable engagement range.
-  const idealRange = PLAY_SPACE_SIZE * 0.28
-  const rangeSign = dist > idealRange ? 1 : -1
-  const dir = norm({
-    x: strafe.x * 0.8 + toShipN.x * rangeSign * 0.35 + rnd.x * 0.2,
-    y: strafe.y * 0.8 + toShipN.y * rangeSign * 0.35 + rnd.y * 0.2,
-    z: strafe.z * 0.8 + toShipN.z * rangeSign * 0.35 + rnd.z * 0.2,
-  })
-  const speed = lerp(SAUCER_SMALL_SPEED_MIN, SAUCER_SMALL_SPEED_MAX, difficulty)
-  return { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed }
+  const forward = getForwardVector(shipYaw, shipPitch)
+  const right = getRightVector(shipYaw, shipPitch)
+  
+  // Compute dot products to determine saucer position relative to player
+  const dotForward = toShipN.x * forward.x + toShipN.y * forward.y + toShipN.z * forward.z
+  // dotRight is computed but not used - saucer position determines allowed directions
+  
+  // Determine allowed directions based on saucer position
+  let allowedDirs: Vector3[] = []
+  
+  if (dotForward > 0) {
+    // Saucer is in forward hemisphere - never fly behind
+    // Prefer sliding left/right (crossing the view), forward is OK
+    allowedDirs = [
+      right,           // +R (slide right)
+      { x: -right.x, y: 0, z: -right.z },  // -R (slide left)
+      forward,         // +F (forward)
+    ]
+  } else {
+    // Saucer is behind - may choose +F to come around in front
+    allowedDirs = [
+      forward,         // +F (come around in front)
+      right,           // +R
+      { x: -right.x, y: 0, z: -right.z },  // -R
+    ]
+  }
+  
+  // Pick a random allowed direction
+  const dir = allowedDirs[Math.floor(Math.random() * allowedDirs.length)]
+  
+  const speed = saucer.type === 'large'
+    ? SAUCER_LARGE_SPEED
+    : lerp(SAUCER_SMALL_SPEED_MIN, SAUCER_SMALL_SPEED_MAX, difficulty)
+  
+  return { x: dir.x * speed, y: 0, z: dir.z * speed } // Flat Y movement
 }
 
 // Build the bullet a saucer fires this frame.
@@ -167,7 +203,7 @@ export interface EnemyUpdate {
 
 export const updateEnemies = (
   enemies: EnemySaucer[],
-  ship: Vector3,
+  ship: { position: Vector3; yaw: number; pitch: number },
   deltaTime: number,
   now: number,
   waveElapsed: number
@@ -183,17 +219,17 @@ export const updateEnemies = (
 
     // Change heading on schedule.
     if (now >= nextTurnAt) {
-      velocity = chooseVelocity(saucer, ship, difficulty)
+      velocity = chooseVelocity(saucer, ship.position, difficulty, ship.yaw, ship.pitch)
       const turnGap =
         saucer.type === 'large'
-          ? randomRange(1800, 2800)
-          : lerp(1900, 1100, difficulty) * randomRange(0.85, 1.15)
+          ? randomRange(4000, 6000)
+          : lerp(3000, 2000, difficulty) * randomRange(0.85, 1.15)
       nextTurnAt = now + turnGap
     }
 
     // Fire on schedule.
     if (now >= nextFireAt) {
-      newBullets.push(fireBullet(saucer, ship, difficulty, now))
+      newBullets.push(fireBullet(saucer, ship.position, difficulty, now))
       fired = true
       const fireGap =
         saucer.type === 'large'
