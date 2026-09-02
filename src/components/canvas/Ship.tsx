@@ -48,9 +48,8 @@ export const Ship = () => {
   return (
     <group ref={cockpitRef}>
       <group rotation={[0, Math.PI, 0]}>
-        {/* Local fill light so the frame/console read as metal, not silhouette */}
-        <pointLight position={[0, 0.05, 0.2]} intensity={2.2} distance={4} color="#c8d6ff" />
-        <pointLight position={[0, -0.2, 0.35]} intensity={1.4} distance={3} color="#ffc27a" />
+        {/* Dim fill only — bright lights here bloomed into a white flare on the dash */}
+        <pointLight position={[0, 0.15, 0.15]} intensity={0.35} distance={2.5} color="#9bb4d0" />
 
         {/* Left window pillar */}
         <mesh position={[-0.72, 0.02, 0.4]}>

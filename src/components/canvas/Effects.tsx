@@ -10,9 +10,9 @@ export const Effects = () => {
       <ToneMapping />
       {/* Enhanced bloom for lasers and emissives */}
       <Bloom
-        intensity={0.8}
-        radius={0.5}
-        luminanceThreshold={0.6}
+        intensity={0.55}
+        radius={0.35}
+        luminanceThreshold={0.85}
         luminanceSmoothing={0.9}
       />
       {/* Vignette for cockpit feel */}

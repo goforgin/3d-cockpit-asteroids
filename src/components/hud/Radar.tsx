@@ -3,7 +3,7 @@ import { getRadarBlips } from '../../game/radar'
 import { PLAY_SPACE_SIZE } from '../../game/constants'
 
 const WORLD_HALF_SIZE = PLAY_SPACE_SIZE / 2
-const RADAR_SIZE = 200
+const RADAR_SIZE = 180
 const CENTER = RADAR_SIZE / 2
 const RING_OUTER = RADAR_SIZE / 2
 const RING_INNER = RADAR_SIZE / 4
@@ -42,7 +42,7 @@ export const Radar = () => {
   )
   
   return (
-    <div className="absolute bottom-8 left-8 pointer-events-none">
+    <div className="pointer-events-none">
       {/* Radar container */}
       <div
         className="relative rounded-full border-2 border-green-500/50 shadow-[inset_0_0_20px_rgba(0,255,0,0.1)]"
