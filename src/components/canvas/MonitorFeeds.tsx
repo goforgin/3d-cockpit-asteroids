@@ -56,6 +56,7 @@ export const MonitorFeeds = () => {
   }, [])
 
   useFrame((state) => {
+    try {
     const feeds = feedsRef.current
     if (!feeds) return
     if (useGameStore.getState().state.gameState !== 'playing') return
@@ -130,6 +131,10 @@ export const MonitorFeeds = () => {
       if (stars) stars.visible = true
       if (explosions) explosions.visible = true
       // Shield visibility is owned by ShieldBubble's useFrame; don't force it on.
+    }
+    } catch {
+      // Dashboard cameras are optional. A WebGL readback failure in Chrome
+      // must not take down the main view.
     }
   }, -1)
 

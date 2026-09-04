@@ -8,46 +8,45 @@ export const useGameFlow = () => {
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase()
+      if (e.metaKey || e.ctrlKey) return
+      if (e.repeat) return
 
-      // Unlock audio on the first user interaction (required by browsers).
+      const key = (e.key || '').toLowerCase()
+      const code = e.code || ''
+      const isEnter = key === 'enter' || code === 'Enter' || code === 'NumpadEnter'
+      const isEscape = key === 'escape' || code === 'Escape'
+      const isSpace = key === ' ' || key === 'spacebar' || code === 'Space'
+      const isMute = key === 'm' || code === 'KeyM'
+
       audioManager.init()
 
-      // Prevent default for game keys
-      if (['escape', 'enter', ' '].includes(key)) {
+      if (isEscape || isEnter || isSpace) {
         e.preventDefault()
       }
-      
-      // Escape key: Pause/Resume
-      if (key === 'escape') {
+
+      if (isEscape) {
         if (gameState === 'playing') {
           pauseGame()
         } else if (gameState === 'paused') {
           resumeGame()
         }
       }
-      
-      // Enter key: Start/Restart
-      if (key === 'enter') {
-        if (gameState === 'menu') {
-          // Initialize audio on first interaction
+
+      if (isEnter) {
+        if (gameState === 'menu' || gameState === 'gameover') {
           audioManager.init()
-          startGame()
-        } else if (gameState === 'gameover') {
-          // Restart game
           startGame()
         }
       }
-      
-      // M key: Toggle mute (updates store so the HUD indicator reflects it)
-      if (key === 'm') {
+
+      if (isMute) {
         toggleMute()
       }
     }
-    
-    window.addEventListener('keydown', handleKeyDown)
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keydown', handleKeyDown, { capture: true })
     }
   }, [gameState, pauseGame, resumeGame, startGame, toggleMute])
 }

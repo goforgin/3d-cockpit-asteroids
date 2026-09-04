@@ -37,10 +37,10 @@ const clamp = (value: number, min: number, max: number): number =>
 
 export const updateShipPhysics = (ship: Ship, deltaTime: number): Ship => {
   // Get input state
-  const left = inputManager.isKeyHeld('arrowleft')
-  const right = inputManager.isKeyHeld('arrowright')
-  const up = inputManager.isKeyHeld('arrowup')
-  const down = inputManager.isKeyHeld('arrowdown')
+  const left = inputManager.isKeyHeld('arrowleft') || inputManager.isKeyHeld('a')
+  const right = inputManager.isKeyHeld('arrowright') || inputManager.isKeyHeld('d')
+  const up = inputManager.isKeyHeld('arrowup') || inputManager.isKeyHeld('w')
+  const down = inputManager.isKeyHeld('arrowdown') || inputManager.isKeyHeld('s')
   const thrust = inputManager.isKeyHeld('x')
 
   // Defensive default so older ship objects without angularVelocity don't NaN.

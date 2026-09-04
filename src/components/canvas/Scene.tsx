@@ -15,16 +15,6 @@ import { EnemyField } from './EnemyField'
 import { EnemyBulletField } from './EnemyBulletField'
 import { MonitorFeeds } from './MonitorFeeds'
 
-// Restore default WebGL state after MonitorFeeds' offscreen gl.render() and
-// before EffectComposer. Leftover AdditiveBlending is what turns the whole
-// view into a stuck white frame.
-const GlStateGuard = () => {
-  useFrame(({ gl }) => {
-    gl.resetState()
-  }, 0.5)
-  return null
-}
-
 export const Scene = () => {
   const starRef = useRef<THREE.Points>(null!)
   
@@ -43,7 +33,7 @@ export const Scene = () => {
         ref={starRef}
         radius={400}
         depth={50}
-        count={10000}
+        count={6000}
         factor={4}
         saturation={0.2}
         fade
@@ -66,7 +56,6 @@ export const Scene = () => {
       <ExplosionField />
       <ThrustParticles />
       <LockReticle />
-      <GlStateGuard />
       <Effects />
       {/* Live camera feeds for dashboard monitors */}
       <MonitorFeeds />

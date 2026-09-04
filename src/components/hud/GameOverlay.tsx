@@ -1,33 +1,49 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../../store/gameStore'
+import { audioManager } from '../../audio/audioManager'
 
 interface GameOverlayProps {
   gameState: 'menu' | 'playing' | 'paused' | 'gameover'
 }
 
 export const GameOverlay = ({ gameState }: GameOverlayProps) => {
-  const { startGame } = useGameStore()
+  const { startGame, resumeGame } = useGameStore()
   const score = useGameStore((state) => state.state.score)
-  
-  // Format score as 6-digit zero-padded
+
   const formattedScore = score.toString().padStart(6, '0')
-  
+
+  const begin = () => {
+    audioManager.init()
+    startGame()
+  }
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameState === 'menu' && e.key === 'Enter') {
-        startGame()
+      if (e.metaKey || e.ctrlKey) return
+      const isEnter = e.key === 'Enter' || e.code === 'Enter' || e.code === 'NumpadEnter'
+      if (gameState === 'menu' && isEnter) {
+        e.preventDefault()
+        begin()
+      }
+      if (gameState === 'gameover' && isEnter) {
+        e.preventDefault()
+        begin()
+      }
+      if (gameState === 'paused' && (e.key === 'Escape' || e.code === 'Escape')) {
+        e.preventDefault()
+        resumeGame()
       }
     }
-    
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [gameState, startGame])
-  
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
+  }, [gameState, startGame, resumeGame])
+
   if (gameState === 'playing') return null
-  
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none">
-      <div className="text-center text-white space-y-6">
+    <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+      <div className="text-center text-white space-y-6 px-4">
         {gameState === 'menu' && (
           <>
             <h1 className="text-6xl font-bold tracking-wider hud-text-glow" style={{ fontFamily: "'Orbitron', monospace" }}>
@@ -36,14 +52,19 @@ export const GameOverlay = ({ gameState }: GameOverlayProps) => {
             <h2 className="text-2xl font-bold tracking-widest hud-text-glow" style={{ fontFamily: "'Orbitron', monospace" }}>
               COCKPIT EDITION
             </h2>
-            <p className="text-xl hud-text-glow" style={{ fontFamily: "'Orbitron', monospace" }}>
-              PRESS ENTER TO START
-            </p>
+            <button
+              type="button"
+              onClick={begin}
+              className="text-xl hud-text-glow px-6 py-3 border border-cyan-400/60 rounded-sm hover:bg-cyan-400/10 cursor-pointer"
+              style={{ fontFamily: "'Orbitron', monospace" }}
+            >
+              CLICK OR PRESS ENTER TO START
+            </button>
             <div className="text-sm text-gray-400 mt-8 space-y-1 font-mono">
-              <p>ARROWS: Steer</p>
+              <p>ARROWS or WASD: Steer</p>
               <p>X: Thrust</p>
               <p>SPACE: Fire</p>
-              <p>Z: Shield</p>
+              <p>Z: Shield (3 bursts per life)</p>
               <p>SHIFT: Hyperspace</p>
               <p>ESC: Pause</p>
             </div>
@@ -54,9 +75,14 @@ export const GameOverlay = ({ gameState }: GameOverlayProps) => {
             <h2 className="text-4xl font-bold hud-text-glow" style={{ fontFamily: "'Orbitron', monospace" }}>
               PAUSED
             </h2>
-            <p className="text-lg hud-text-glow" style={{ fontFamily: "'Orbitron', monospace" }}>
-              PRESS ESC TO RESUME
-            </p>
+            <button
+              type="button"
+              onClick={() => resumeGame()}
+              className="text-lg hud-text-glow px-6 py-3 border border-cyan-400/60 rounded-sm hover:bg-cyan-400/10 cursor-pointer"
+              style={{ fontFamily: "'Orbitron', monospace" }}
+            >
+              CLICK OR PRESS ESC TO RESUME
+            </button>
           </>
         )}
         {gameState === 'gameover' && (
@@ -67,9 +93,14 @@ export const GameOverlay = ({ gameState }: GameOverlayProps) => {
             <p className="text-2xl hud-text-glow" style={{ fontFamily: "'Orbitron', monospace" }}>
               SCORE: {formattedScore}
             </p>
-            <p className="text-xl hud-text-glow mt-4" style={{ fontFamily: "'Orbitron', monospace" }}>
-              PRESS ENTER TO RESTART
-            </p>
+            <button
+              type="button"
+              onClick={begin}
+              className="text-xl hud-text-glow mt-4 px-6 py-3 border border-cyan-400/60 rounded-sm hover:bg-cyan-400/10 cursor-pointer"
+              style={{ fontFamily: "'Orbitron', monospace" }}
+            >
+              CLICK OR PRESS ENTER TO RESTART
+            </button>
           </>
         )}
       </div>

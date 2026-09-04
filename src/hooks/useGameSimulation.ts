@@ -22,14 +22,13 @@ export const useGameSimulation = () => {
   const simulationTick = useCallback((rawDelta: number) => {
     const deltaTime = Math.min(Math.max(rawDelta, 0), 0.05)
 
-    // Update input manager first
     inputManager.update(deltaTime)
-    
+
     const state = useGameStore.getState().state
     const now = Date.now()
-    
-    // Skip if not playing
-    if (state.gameState !== 'playing') return
+
+    try {
+      if (state.gameState !== 'playing') return
     
     // Update ship physics
     const newShip = updateShipPhysics(state.ship, deltaTime)
@@ -118,7 +117,11 @@ export const useGameSimulation = () => {
       inputManager.isKeyHeld('arrowleft') ||
       inputManager.isKeyHeld('arrowright') ||
       inputManager.isKeyHeld('arrowup') ||
-      inputManager.isKeyHeld('arrowdown')
+      inputManager.isKeyHeld('arrowdown') ||
+      inputManager.isKeyHeld('a') ||
+      inputManager.isKeyHeld('d') ||
+      inputManager.isKeyHeld('w') ||
+      inputManager.isKeyHeld('s')
 
     // Rocks and saucers are both lockable. Saucers get an inflated capture
     // radius so the reticle grabs the small, moving ones without pixel-perfect aim.
@@ -138,8 +141,9 @@ export const useGameSimulation = () => {
     }
     useGameStore.getState().setLockedTarget(nextLock)
 
-    // Check for laser firing (Space key)
-    if (inputManager.isKeyDown(' ')) {
+    // Hold space to fire (rate-limited). Edge-detect is not enough — we
+    // clear `pressed` every tick so holding has to use `held`.
+    if (inputManager.isKeyHeld(' ') || inputManager.isKeyHeld('space')) {
       const preFire = useGameStore.getState().state
       const fireRateMs = 1000 / FIRE_RATE
       const willFire = now - preFire.lastShotTime >= fireRateMs
@@ -198,6 +202,10 @@ export const useGameSimulation = () => {
       audioManager.setThrustVolume(speedRatio)
     } else {
       audioManager.stopThrust()
+    }
+    } finally {
+      // Edge-trigger: "pressed this tick" must not survive into the next one.
+      inputManager.resetPressed()
     }
   }, [])
   
